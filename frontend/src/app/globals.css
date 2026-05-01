@@ -1,0 +1,103 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f5f7ff;
+  --foreground: #23263a;
+  --muted: #677089;
+  --panel: rgba(255, 255, 255, 0.82);
+  --panel-strong: rgba(255, 255, 255, 0.95);
+  --border: rgba(140, 163, 255, 0.16);
+  --accent: #ff8ea1;
+  --accent-2: #8ca3ff;
+  --accent-3: #ffc56f;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::selection {
+  background: rgba(255, 142, 161, 0.35);
+  color: white;
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -14px, 0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-float {
+  animation: float 10s ease-in-out infinite;
+}
+
+.animate-fade-up {
+  animation: fade-up 0.7s ease both;
+}
+
+.glass-panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 30px 90px rgba(94, 111, 170, 0.16);
+}
+
+.glass-panel-strong {
+  background: var(--panel-strong);
+  border: 1px solid rgba(140, 163, 255, 0.18);
+  backdrop-filter: blur(18px);
+}
+
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(140, 163, 255, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(140, 163, 255, 0.07) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+.shine {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.2));
+  background-size: 200% 100%;
+  animation: shimmer 3.5s linear infinite;
+}

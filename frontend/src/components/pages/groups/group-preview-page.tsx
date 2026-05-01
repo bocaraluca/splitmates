@@ -1,0 +1,1082 @@
+"use client";
+
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
+import AddRoundedIcon from "@mui/icons-material/AddRounded";
+import EditRoundedIcon from "@mui/icons-material/EditRounded";
+import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
+import GroupRoundedIcon from "@mui/icons-material/GroupRounded";
+import ReceiptLongRoundedIcon from "@mui/icons-material/ReceiptLongRounded";
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Chip,
+  Container,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
+  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  Tabs,
+  Tab,
+  TextField,
+  Typography,
+} from "@mui/material";
+import { AppNavbar } from "@/components/navigation/app-navbar";
+import { fetchFromBackend, markExpenseDeleted } from "@/lib/backend-api";
+import { getToken } from "@/lib/auth-storage";
+import { EXPENSE_CATEGORIES } from "@/lib/types";
+import type { BackendStatus, DashboardSummary, ExpenseCategory, ExpenseListResponse, GroupStats, GroupSummary } from "@/lib/types";
+
+function formatMoney(value: number) {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "RON", maximumFractionDigits: 2 }).format(value);
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "2-digit", year: "numeric" }).format(new Date(value));
+}
+
+const INFINITE_SCROLL_PAGE_SIZE = 20;
+
+export function GroupPreviewPage({ groupId }: { groupId: number }) {
+  const router = useRouter();
+  const [group, setGroup] = useState<GroupSummary | null>(null);
+  const [expenses, setExpenses] = useState<ExpenseListResponse | null>(null);
+  const [stats, setStats] = useState<GroupStats | null>(null);
+  const [tabValue, setTabValue] = useState<"expenses" | "members">("expenses");
+  const [generatorBusy, setGeneratorBusy] = useState(false);
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [generatorRunning, setGeneratorRunning] = useState(false);
+  const [groupError, setGroupError] = useState<string | null>(null);
+  const [token] = useState<string | null>(getToken);
+  const [newMemberIdentifier, setNewMemberIdentifier] = useState("");
+  const [memberBusy, setMemberBusy] = useState(false);
+  const [groupActionBusy, setGroupActionBusy] = useState(false);
+  const [expensePage, setExpensePage] = useState(1);
+  const [expenseSortBy, setExpenseSortBy] = useState<"date" | "amount">("date");
+  const [expenseSortOrder, setExpenseSortOrder] = useState<"asc" | "desc">("desc");
+  const [expenseCategory, setExpenseCategory] = useState<"all" | ExpenseCategory>("all");
+  const [expensePaidByUserId, setExpensePaidByUserId] = useState<"all" | number>("all");
+  const [expenseDeletingId, setExpenseDeletingId] = useState<number | null>(null);
+  const [expenseItems, setExpenseItems] = useState<ExpenseListResponse["items"]>([]);
+  const [expenseTotalPages, setExpenseTotalPages] = useState(1);
+  const [isLoadingMoreExpenses, setIsLoadingMoreExpenses] = useState(false);
+  const [prefetchedExpenses, setPrefetchedExpenses] = useState<{ page: number; response: ExpenseListResponse } | null>(null);
+  const expenseLoadMoreRef = useRef<HTMLDivElement | null>(null);
+
+  const fetchExpensePage = useCallback(async (page: number) => {
+    const params = new URLSearchParams({
+      page: String(page),
+      pageSize: String(INFINITE_SCROLL_PAGE_SIZE),
+      sortBy: expenseSortBy,
+      sortOrder: expenseSortOrder,
+    });
+
+    if (expenseCategory !== "all") {
+      params.set("category", expenseCategory);
+    }
+
+    if (expensePaidByUserId !== "all") {
+      params.set("paidByUserId", String(expensePaidByUserId));
+    }
+
+    return fetchFromBackend<ExpenseListResponse>(`/groups/${groupId}/expenses?${params.toString()}`, token ? { token } : {});
+  }, [expenseCategory, expensePaidByUserId, expenseSortBy, expenseSortOrder, groupId, token]);
+
+  const loadExpensesStatsAndHealth = useCallback(async () => {
+    try {
+      const auth = token ? { token } : {};
+
+      const [expensesResponse, statsResponse, healthResponse] = await Promise.all([
+        fetchExpensePage(1),
+        fetchFromBackend<{ stats: GroupStats }>(`/groups/${groupId}/stats`, auth),
+        fetchFromBackend<BackendStatus>("/health", auth),
+      ]);
+
+      setExpenses(expensesResponse);
+      setExpenseItems(expensesResponse.items);
+      setExpensePage(1);
+      setExpenseTotalPages(expensesResponse.totalPages);
+      setPrefetchedExpenses(null);
+      setStats(statsResponse.stats);
+      setGeneratorRunning(Boolean(healthResponse.generator?.running && healthResponse.generator?.groupId === groupId));
+      setGroupError(null);
+    } catch (error) {
+      setGroupError(error instanceof Error ? error.message : "Unable to load group details.");
+    }
+  }, [fetchExpensePage, groupId, token]);
+
+  const loadGroupPreviewData = useCallback(async () => {
+    try {
+      const auth = token ? { token } : {};
+      const groupResponse = await fetchFromBackend<{ group: GroupSummary; dashboard: DashboardSummary | null }>(`/groups/${groupId}`, auth);
+      setGroup(groupResponse.group);
+      await loadExpensesStatsAndHealth();
+    } catch (error) {
+      setGroupError(error instanceof Error ? error.message : "Unable to load group details.");
+    }
+  }, [groupId, loadExpensesStatsAndHealth, token]);
+
+  useEffect(() => {
+    Promise.resolve().then(() => loadGroupPreviewData());
+  }, [loadGroupPreviewData]);
+
+  const loadMoreExpenses = useCallback(async () => {
+    if (isLoadingMoreExpenses || expensePage >= expenseTotalPages) {
+      return;
+    }
+
+    setIsLoadingMoreExpenses(true);
+    try {
+      const nextPage = expensePage + 1;
+      const nextResponse = prefetchedExpenses?.page === nextPage ? prefetchedExpenses.response : await fetchExpensePage(nextPage);
+
+      setExpenseItems((previous) => {
+        const seen = new Set(previous.map((item) => item.id));
+        const nextItems = nextResponse.items.filter((item) => !seen.has(item.id));
+        return previous.concat(nextItems);
+      });
+      setExpensePage(nextPage);
+      setExpenses(nextResponse);
+      setExpenseTotalPages(nextResponse.totalPages);
+      setPrefetchedExpenses(null);
+
+      if (nextPage < nextResponse.totalPages) {
+        const prefetched = await fetchExpensePage(nextPage + 1);
+        setPrefetchedExpenses({ page: nextPage + 1, response: prefetched });
+      }
+    } catch {
+      setGroupError("Unable to load more expenses.");
+    } finally {
+      setIsLoadingMoreExpenses(false);
+    }
+  }, [expensePage, expenseTotalPages, fetchExpensePage, isLoadingMoreExpenses, prefetchedExpenses]);
+
+  useEffect(() => {
+    if (tabValue !== "expenses") {
+      return;
+    }
+
+    const anchor = expenseLoadMoreRef.current;
+    if (!anchor) {
+      return;
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting) {
+        void loadMoreExpenses();
+      }
+    }, { rootMargin: "240px 0px" });
+
+    observer.observe(anchor);
+    return () => observer.disconnect();
+  }, [loadMoreExpenses, tabValue]);
+
+  useEffect(() => {
+    const handleBackendUpdate = (event: Event) => {
+      const detail = (event as CustomEvent<unknown>).detail;
+      if (!touchesCurrentGroup(detail, groupId)) {
+        return;
+      }
+
+      const payload = detail as { type?: unknown } | undefined;
+      const type = typeof payload?.type === "string" ? payload.type : "";
+
+      if (type.startsWith("group.")) {
+        void loadGroupPreviewData();
+        return;
+      }
+
+      void loadExpensesStatsAndHealth();
+    };
+
+    window.addEventListener("splitmates:backend-update", handleBackendUpdate);
+    return () => window.removeEventListener("splitmates:backend-update", handleBackendUpdate);
+  }, [groupId, loadExpensesStatsAndHealth, loadGroupPreviewData]);
+
+  const categoryBreakdown = useMemo(() => {
+    if (!stats?.categories?.length) {
+      return [];
+    }
+
+    return stats.categories.filter((item) => item.amount > 0);
+  }, [stats]);
+
+  const monthlyBreakdown = useMemo(() => {
+    return stats?.months ?? [];
+  }, [stats]);
+
+  const highestMonthlyAmount = useMemo(() => {
+    if (!monthlyBreakdown.length) {
+      return 1;
+    }
+
+    return Math.max(...monthlyBreakdown.map((item) => item.amount), 1);
+  }, [monthlyBreakdown]);
+
+  const spendingRing = useMemo(() => {
+    if (!categoryBreakdown.length) {
+      return "conic-gradient(#d6deea 0 100%)";
+    }
+
+    let cursor = 0;
+    const segments = categoryBreakdown.map((item) => {
+      const next = cursor + item.percentage;
+      const segment = `${categoryColor(item.category)} ${cursor.toFixed(2)}% ${next.toFixed(2)}%`;
+      cursor = next;
+      return segment;
+    });
+
+    if (cursor < 100) {
+      segments.push(`#d6deea ${cursor.toFixed(2)}% 100%`);
+    }
+
+    return `conic-gradient(${segments.join(",")})`;
+  }, [categoryBreakdown]);
+
+  async function handleGeneratorToggle() {
+    if (generatorRunning) {
+      await handleGeneratorStop();
+      return;
+    }
+    await handleGeneratorStart();
+  }
+
+  async function handleGeneratorStart() {
+    setGeneratorBusy(true);
+    try {
+      await fetchFromBackend("/generator/start", {
+        method: "POST",
+        token: token ?? undefined,
+        body: JSON.stringify({ groupId }),
+      });
+      
+      setGeneratorRunning(true);
+      await loadGroupPreviewData();
+    } catch (error) {
+      setActionMessage(error instanceof Error ? error.message : "Unable to start generator.");
+    } finally {
+      setGeneratorBusy(false);
+    }
+  }
+
+  async function handleGeneratorStop() {
+    setGeneratorBusy(true);
+    try {
+      await fetchFromBackend("/generator/stop", { method: "POST", token: token ?? undefined });
+      
+      setGeneratorRunning(false);
+      await loadGroupPreviewData();
+    } catch (error) {
+      setActionMessage(error instanceof Error ? error.message : "Unable to stop generator.");
+    } finally {
+      setGeneratorBusy(false);
+    }
+  }
+
+  async function handleMemberAdd() {
+    const identifier = newMemberIdentifier.trim();
+    if (!identifier) {
+      return;
+    }
+
+    setMemberBusy(true);
+    try {
+      await fetchFromBackend(`/groups/${groupId}/members`, {
+        method: "POST",
+        token: token ?? undefined,
+        body: JSON.stringify({ identifier }),
+      });
+      setNewMemberIdentifier("");
+      await loadGroupPreviewData();
+    } catch (error) {
+      setActionMessage(error instanceof Error ? error.message : "Unable to add member.");
+    } finally {
+      setMemberBusy(false);
+    }
+  }
+
+  async function handleMemberRemove(userId: number) {
+    setMemberBusy(true);
+    try {
+      await fetchFromBackend(`/groups/${groupId}/members`, {
+        method: "DELETE",
+        token: token ?? undefined,
+        body: JSON.stringify({ userId }),
+      });
+      await loadGroupPreviewData();
+    } catch (error) {
+      setActionMessage(error instanceof Error ? error.message : "Unable to remove member.");
+    } finally {
+      setMemberBusy(false);
+    }
+  }
+
+  async function handleLeaveGroup() {
+    if (!window.confirm("Leave this group?")) {
+      return;
+    }
+
+    setGroupActionBusy(true);
+    try {
+      await fetchFromBackend(`/groups/${groupId}/leave`, {
+        method: "POST",
+        token: token ?? undefined,
+      });
+      router.push("/groups");
+    } catch (error) {
+      setActionMessage(error instanceof Error ? error.message : "Unable to leave group.");
+    } finally {
+      setGroupActionBusy(false);
+    }
+  }
+
+  async function handleDeleteGroup() {
+    if (!window.confirm("Delete this group? This action cannot be undone.")) {
+      return;
+    }
+
+    setGroupActionBusy(true);
+    try {
+      await fetchFromBackend(`/groups/${groupId}`, {
+        method: "DELETE",
+        token: token ?? undefined,
+      });
+      router.push("/groups");
+    } catch (error) {
+      setActionMessage(error instanceof Error ? error.message : "Unable to delete group.");
+    } finally {
+      setGroupActionBusy(false);
+    }
+  }
+
+  async function handleDeleteExpense(expenseId: number) {
+    if (!window.confirm("Delete this expense? This action cannot be undone.")) {
+      return;
+    }
+
+    setExpenseDeletingId(expenseId);
+    markExpenseDeleted(groupId, expenseId);
+    setExpenseItems((items) => items.filter((item) => item.id !== expenseId));
+    setExpenses((current) => {
+      if (!current) {
+        return null;
+      }
+      return {
+        ...current,
+        items: current.items.filter((item) => item.id !== expenseId),
+        totalItems: Math.max(0, current.totalItems - 1),
+      };
+    });
+    try {
+      await fetchFromBackend(`/groups/${groupId}/expenses/${expenseId}`, {
+        method: "DELETE",
+        token: token ?? undefined,
+      });
+    } catch (error) {
+      setGroupError(error instanceof Error ? error.message : "Unable to delete expense.");
+    } finally {
+      setExpenseDeletingId(null);
+    }
+  }
+
+  return (
+    <Box
+      sx={{
+        minHeight: "100vh",
+        background: "linear-gradient(96deg, rgba(248,233,255,0.92) 0%, rgba(238,225,255,0.9) 52%, rgba(227,246,255,0.9) 100%)",
+        overflowX: "clip",
+      }}
+    >
+      <AppNavbar />
+      <Container maxWidth="xl" sx={{ py: { xs: 3, md: 5 } }}>
+        <Stack spacing={3}>
+          <Button
+            component={Link}
+            href="/groups"
+            startIcon={<ArrowBackRoundedIcon />}
+            sx={{ alignSelf: "flex-start", color: "#e79aaa", fontWeight: 700, textTransform: "none" }}
+          >
+            Back to Groups
+          </Button>
+
+          <Box
+            sx={{
+              display: "grid",
+              gap: 1.6,
+              width: "100%",
+              maxWidth: "none",
+              gridTemplateColumns: { xs: "1fr", lg: "minmax(0, 1fr) auto" },
+              alignItems: { lg: "start" },
+            }}
+          >
+            <Box sx={{ minWidth: 0 }}>
+              <Stack direction="column" spacing={1.0} sx={{ alignItems: "flex-start" }}>
+                <Typography
+                  variant="h2"
+                  sx={{
+                    fontSize: { xs: "clamp(24px, 9vw, 28px)", md: 62 },
+                    fontWeight: 900,
+                    lineHeight: 0.95,
+                    maxWidth: "100%",
+                    wordBreak: "break-word",
+                    overflowWrap: "anywhere",
+                  }}
+                >
+                  {group?.name ?? "Group preview"}
+                </Typography>
+                {group?.isAdmin ? (
+                  <Button
+                    component={Link}
+                    href={`/groups/${groupId}/edit`}
+                    variant="outlined"
+                    startIcon={<EditRoundedIcon />}
+                    sx={{
+                      borderRadius: 999,
+                      minHeight: { xs: 40, md: 46 },
+                      px: { xs: 1.4, md: 1.8 },
+                      fontSize: { xs: 12, md: 14 },
+                      fontWeight: 900,
+                      textTransform: "none",
+                      borderColor: "#e83ea8",
+                      color: "#b42352",
+                      bgcolor: "rgba(255,255,255,0.88)",
+                      ml: 0,
+                      mt: 0,
+                      whiteSpace: "nowrap",
+                      alignSelf: "flex-start",
+                      "&:hover": {
+                        borderColor: "#d9369b",
+                        bgcolor: "rgba(255,235,246,0.92)",
+                      },
+                    }}
+                  >
+                    Edit group
+                  </Button>
+                ) : null}
+              </Stack>
+              {group?.description ? (
+                <Typography
+                  variant="h6"
+                  sx={{ color: "text.secondary", fontWeight: 500, maxWidth: 760, fontSize: { xs: 15, md: 22 }, mt: 0.9, overflowWrap: "anywhere" }}
+                >
+                  {group.description}
+                </Typography>
+              ) : null}
+            </Box>
+
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              spacing={{ xs: 0.8, sm: 1.2 }}
+              sx={{
+                alignItems: { xs: "stretch", sm: "center" },
+                justifyContent: { xs: "flex-start", lg: "flex-start" },
+                width: { xs: "100%", lg: "auto" },
+                mt: { xs: 0.25, lg: 0 },
+              }}
+            >
+              <Button
+                variant="contained"
+                onClick={() => void handleGeneratorToggle()}
+                disabled={generatorBusy}
+                sx={{
+                  borderRadius: 999,
+                  minHeight: { xs: 42, md: 58 },
+                  px: { xs: 1.4, md: 2.8 },
+                  fontSize: { xs: 11, md: 16 },
+                  fontWeight: 900,
+                  textTransform: "none",
+                  boxShadow: "0 14px 28px rgba(111, 41, 198, 0.26)",
+                  bgcolor: generatorRunning ? "#e83ea8" : "#6f29c6",
+                  color: "white",
+                  width: { xs: "100%", sm: "auto" },
+                  minWidth: 0,
+                  whiteSpace: "nowrap",
+                  "&:hover": {
+                    bgcolor: generatorRunning ? "#d9369b" : "#5f22b2",
+                    boxShadow: "0 18px 34px rgba(111, 41, 198, 0.34)",
+                  },
+                }}
+              >
+                {generatorRunning ? "Stop fake expenses" : "Create fake expenses"}
+              </Button>
+
+              <Button
+                component={Link}
+                href={`/groups/${groupId}/expenses/new`}
+                aria-label="Add expense"
+                sx={{
+                  width: { xs: 48, md: 72 },
+                  height: { xs: 48, md: 72 },
+                  minWidth: { xs: 48, md: 72 },
+                  borderRadius: "50%",
+                  background: "linear-gradient(135deg, #5ec9eb, #6f29c6)",
+                  color: "white",
+                  boxShadow: "0 14px 28px rgba(111, 41, 198, 0.34)",
+                  border: "2px solid rgba(255,255,255,0.5)",
+                  animation: "floatActionButton 4.4s ease-in-out infinite",
+                  transformOrigin: "center",
+                  textTransform: "none",
+                  position: "relative",
+                  overflow: "hidden",
+                  "@keyframes floatActionButton": {
+                    "0%": { transform: "translate3d(0, 0, 0) scale(1)" },
+                    "50%": { transform: "translate3d(0, -8px, 0) scale(1.03)" },
+                    "100%": { transform: "translate3d(0, 0, 0) scale(1)" },
+                  },
+                  "&:hover": {
+                    background: "linear-gradient(135deg, #4db9df, #5f22b2)",
+                    boxShadow: "0 18px 34px rgba(111, 41, 198, 0.42)",
+                  },
+                  alignSelf: { xs: "center", sm: "auto" },
+                  flex: "0 0 auto",
+                }}
+              >
+                <AddRoundedIcon sx={{ fontSize: { xs: 24, md: 34 } }} />
+              </Button>
+            </Stack>
+          </Box>
+
+          {groupError ? (
+            <Typography sx={{ color: "#cf2e2e", fontWeight: 700 }}>
+              {groupError}
+            </Typography>
+          ) : null}
+
+          {actionMessage ? (
+            <Typography sx={{ color: "#5f22b2", fontWeight: 700 }} role="status" aria-live="polite">
+              {actionMessage}
+            </Typography>
+          ) : null}
+
+          <Box sx={{ borderBottom: "1px solid rgba(46, 58, 86, 0.12)" }}>
+            <Tabs
+              value={tabValue}
+              onChange={(_event, value) => setTabValue(value)}
+              sx={{ minHeight: 54 }}
+            >
+              <Tab
+                value="expenses"
+                icon={<ReceiptLongRoundedIcon />}
+                iconPosition="start"
+                label="EXPENSES"
+                sx={{ minHeight: 54, fontWeight: 700 }}
+              />
+              <Tab
+                value="members"
+                icon={<GroupRoundedIcon />}
+                iconPosition="start"
+                label={`MEMBERS (${group?.members.filter(Boolean).length ?? 0})`}
+                sx={{ minHeight: 54, fontWeight: 700 }}
+              />
+            </Tabs>
+          </Box>
+
+          {tabValue === "expenses" ? (
+            <Box sx={{ display: "grid", gap: 2, alignItems: "start", gridTemplateColumns: { xs: "1fr", lg: "minmax(0, 1.55fr) minmax(300px, 0.8fr)" } }}>
+              <Card sx={{ borderRadius: 1.5, background: "rgba(255,255,255,0.82)" }}>
+                <CardContent sx={{ p: 0 }}>
+                  <Stack direction={{ xs: "column", md: "row" }} spacing={1.1} sx={{ p: 1.5, borderBottom: "1px solid rgba(46,58,86,0.1)" }}>
+                    <FormControl size="small" sx={{ minWidth: { xs: "100%", md: 150 } }}>
+                      <InputLabel id="expense-category-label">Category</InputLabel>
+                      <Select
+                        labelId="expense-category-label"
+                        value={expenseCategory}
+                        label="Category"
+                        onChange={(event) => {
+                          setExpensePage(1);
+                          setExpenseCategory(event.target.value as typeof expenseCategory);
+                        }}
+                      >
+                        <MenuItem value="all">All categories</MenuItem>
+                        {EXPENSE_CATEGORIES.map((option) => (
+                          <MenuItem key={option} value={option}>
+                            {readableCategory(option)}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+
+                    <FormControl size="small" sx={{ minWidth: { xs: "100%", md: 170 } }}>
+                      <InputLabel id="expense-paid-by-label">Paid by</InputLabel>
+                      <Select
+                        labelId="expense-paid-by-label"
+                        value={expensePaidByUserId === "all" ? "all" : String(expensePaidByUserId)}
+                        label="Paid by"
+                        onChange={(event) => {
+                          setExpensePage(1);
+                          const value = event.target.value;
+                          setExpensePaidByUserId(value === "all" ? "all" : Number(value));
+                        }}
+                      >
+                        <MenuItem value="all">All members</MenuItem>
+                        {(group?.members ?? [])
+                          .filter(Boolean)
+                          .map((member) => (
+                            <MenuItem key={member!.id} value={String(member!.id)}>
+                              {member!.username}
+                            </MenuItem>
+                          ))}
+                      </Select>
+                    </FormControl>
+
+                    <FormControl size="small" sx={{ minWidth: { xs: "100%", md: 132 } }}>
+                      <InputLabel id="expense-sort-by-label">Sort by</InputLabel>
+                      <Select
+                        labelId="expense-sort-by-label"
+                        value={expenseSortBy}
+                        label="Sort by"
+                        onChange={(event) => {
+                          setExpensePage(1);
+                          setExpenseSortBy(event.target.value as "date" | "amount");
+                        }}
+                      >
+                        <MenuItem value="date">Date</MenuItem>
+                        <MenuItem value="amount">Amount</MenuItem>
+                      </Select>
+                    </FormControl>
+
+                    <FormControl size="small" sx={{ minWidth: { xs: "100%", md: 132 } }}>
+                      <InputLabel id="expense-sort-order-label">Order</InputLabel>
+                      <Select
+                        labelId="expense-sort-order-label"
+                        value={expenseSortOrder}
+                        label="Order"
+                        onChange={(event) => {
+                          setExpensePage(1);
+                          setExpenseSortOrder(event.target.value as "asc" | "desc");
+                        }}
+                      >
+                        <MenuItem value="desc">Desc</MenuItem>
+                        <MenuItem value="asc">Asc</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Stack>
+
+                  <Box sx={{ display: { xs: "none", md: "block" }, overflowX: "auto" }}>
+                    <Table
+                      sx={{
+                        width: "100%",
+                        minWidth: 0,
+                        tableLayout: "fixed",
+                      }}
+                    >
+                      <TableHead>
+                        <TableRow>
+                          <TableCell sx={{ width: "32%" }}>Title</TableCell>
+                          <TableCell sx={{ width: "20%" }}>Category</TableCell>
+                          <TableCell sx={{ width: "14%" }}>Amount</TableCell>
+                          <TableCell sx={{ width: "16%" }}>Paid By</TableCell>
+                          <TableCell sx={{ width: "18%" }}>Actions</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {expenseItems.map((expense) => (
+                          <TableRow key={expense.id} hover>
+                            <TableCell>
+                              <Typography sx={{ fontWeight: 600 }}>{expense.title}</Typography>
+                              <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                                {formatDate(expense.date)}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Chip
+                                size="small"
+                                label={readableCategory(expense.category)}
+                                sx={{
+                                  bgcolor: `${categoryColor(expense.category)}22`,
+                                  color: categoryColor(expense.category),
+                                  fontWeight: 700,
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell sx={{ fontWeight: 800 }}>{formatMoney(expense.amount)}</TableCell>
+                            <TableCell>{expense.paidBy?.username ?? "Unknown"}</TableCell>
+                            <TableCell>
+                              <Stack direction="row" spacing={0.5} sx={{ flexWrap: "wrap" }}>
+                                <Button
+                                  component={Link}
+                                  href={`/groups/${groupId}/expenses/${expense.id}`}
+                                  variant="text"
+                                  size="small"
+                                  aria-label="Edit expense"
+                                  sx={{ minWidth: 0, p: 0.5 }}
+                                >
+                                  <EditRoundedIcon sx={{ fontSize: 18 }} />
+                                </Button>
+                                <Button
+                                  variant="text"
+                                  size="small"
+                                  color="error"
+                                  disabled={expenseDeletingId === expense.id}
+                                  onClick={() => void handleDeleteExpense(expense.id)}
+                                  aria-label="Delete expense"
+                                  sx={{ minWidth: 0, p: 0.5 }}
+                                >
+                                  <DeleteOutlineRoundedIcon sx={{ fontSize: 18 }} />
+                                </Button>
+                              </Stack>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </Box>
+
+                  <Stack spacing={1.2} sx={{ display: { xs: "block", md: "none" }, p: 1.5 }}>
+                    {expenseItems.map((expense) => (
+                      <Card key={expense.id} sx={{ borderRadius: 1.5, bgcolor: "rgba(255,255,255,0.95)", border: "1px solid rgba(46,58,86,0.08)" }}>
+                        <CardContent sx={{ p: 1.6 }}>
+                          <Stack spacing={1}>
+                            <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1.2, alignItems: "flex-start" }}>
+                              <Box sx={{ minWidth: 0 }}>
+                                <Typography sx={{ fontWeight: 800, fontSize: 18, lineHeight: 1.15 }}>{expense.title}</Typography>
+                                <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                                  {formatDate(expense.date)}
+                                </Typography>
+                              </Box>
+                              <Stack direction="row" spacing={0.6} sx={{ flexShrink: 0 }}>
+                                <Button component={Link} href={`/groups/${groupId}/expenses/${expense.id}`} variant="outlined" size="small" sx={{ whiteSpace: "nowrap" }}>
+                                  Edit
+                                </Button>
+                                <Button
+                                  variant="text"
+                                  size="small"
+                                  color="error"
+                                  disabled={expenseDeletingId === expense.id}
+                                  onClick={() => void handleDeleteExpense(expense.id)}
+                                  sx={{ minWidth: 0, p: 0.5 }}
+                                >
+                                  <DeleteOutlineRoundedIcon sx={{ fontSize: 18 }} />
+                                </Button>
+                              </Stack>
+                            </Box>
+
+                            <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
+                              <Chip
+                                size="small"
+                                label={readableCategory(expense.category)}
+                                sx={{
+                                  bgcolor: `${categoryColor(expense.category)}22`,
+                                  color: categoryColor(expense.category),
+                                  fontWeight: 700,
+                                }}
+                              />
+                              <Chip size="small" label={expense.paidBy?.username ?? "Unknown"} />
+                              <Chip size="small" label={formatMoney(expense.amount)} />
+                            </Stack>
+                          </Stack>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </Stack>
+
+                  <Box
+                    sx={{
+                      px: 2.2,
+                      py: 1.3,
+                      borderTop: "1px solid rgba(46,58,86,0.1)",
+                      color: "text.secondary",
+                      fontSize: 14,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 1,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+                      <Typography variant="body2">
+                        Loaded {expenseItems.length}{expenses?.totalItems ? ` of ${expenses.totalItems}` : ""} expenses
+                      </Typography>
+                      {isLoadingMoreExpenses ? <Typography variant="body2">Loading more...</Typography> : null}
+                    </Stack>
+                  </Box>
+
+                  <Box ref={expenseLoadMoreRef} sx={{ height: 1, width: "100%" }} />
+                </CardContent>
+              </Card>
+
+              <Stack spacing={2}>
+                <Card sx={{ borderRadius: 1.5, bgcolor: "rgba(255, 233, 238, 0.86)" }}>
+                  <CardContent sx={{ py: 3.2, textAlign: "center" }}>
+                    <Typography sx={{ color: "#9b9b9b", fontWeight: 800, letterSpacing: "0.08em" }}>TOTAL SPENT</Typography>
+                    <Typography sx={{ mt: 1, fontSize: { xs: 34, md: 46 }, lineHeight: 1, color: "#e988a2", fontWeight: 900 }}>
+                      {Math.round(stats?.totalSpent ?? 0)}
+                    </Typography>
+                    <Typography sx={{ color: "#8c8c8c", fontWeight: 600 }}>RON</Typography>
+                  </CardContent>
+                </Card>
+
+                <Card sx={{ borderRadius: 1.5, bgcolor: "rgba(227, 241, 252, 0.9)" }}>
+                  <CardContent sx={{ py: 3.2, textAlign: "center" }}>
+                    <Typography sx={{ color: "#9b9b9b", fontWeight: 800, letterSpacing: "0.08em" }}>MOST EXPENSIVE</Typography>
+                    <Typography sx={{ mt: 1.2, color: "#2f78c9", fontSize: { xs: 30, md: 38 }, lineHeight: 1, fontWeight: 900 }}>
+                      {readableCategory(stats?.mostExpensiveCategory ?? "other")}
+                    </Typography>
+                    <Typography sx={{ color: "#7c8ea5", fontWeight: 600 }}>
+                      {formatMoney(stats?.topCategoryAmount ?? 0)}
+                    </Typography>
+                  </CardContent>
+                </Card>
+
+                <Card sx={{ borderRadius: 1.5, background: "rgba(255,255,255,0.82)" }}>
+                  <CardContent>
+                    <Typography variant="h5" sx={{ fontWeight: 800 }}>
+                      Spending by Category
+                    </Typography>
+                    <Stack
+                      direction={{ xs: "column", md: "row" }}
+                      spacing={2.4}
+                      sx={{ mt: 2, alignItems: { xs: "stretch", md: "center" }, justifyContent: "center" }}
+                    >
+                      <Box
+                        sx={{
+                          width: { xs: 156, md: 220 },
+                          height: { xs: 156, md: 220 },
+                          borderRadius: "50%",
+                          background: spendingRing,
+                          position: "relative",
+                          flexShrink: 0,
+                          mx: { xs: "auto", md: 0 },
+                        }}
+                      />
+                      <Stack spacing={1} sx={{ width: { xs: "100%", md: "auto" } }}>
+                        {categoryBreakdown.map((item) => (
+                          <Typography key={item.category} sx={{ color: categoryColor(item.category), fontWeight: 700 }}>
+                            {readableCategory(item.category)} {Math.round(item.percentage)}%
+                          </Typography>
+                        ))}
+                      </Stack>
+                    </Stack>
+                  </CardContent>
+                </Card>
+
+                <Card sx={{ borderRadius: 1.5, background: "rgba(255,255,255,0.82)" }}>
+                  <CardContent>
+                    <Typography variant="h5" sx={{ fontWeight: 800 }}>
+                      Expenses by Month (Last 6 Months)
+                    </Typography>
+                    <Stack
+                      direction={{ xs: "column", sm: "row" }}
+                      spacing={1.1}
+                      sx={{ mt: 2.2, minHeight: { xs: "auto", sm: 200 }, pb: 0.6 }}
+                    >
+                      <Box
+                        sx={{
+                          display: { xs: "grid", sm: "none" },
+                          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                          gap: 1,
+                          width: "100%",
+                        }}
+                      >
+                        {monthlyBreakdown.map((month) => {
+                          const height = `${Math.max(12, (month.amount / highestMonthlyAmount) * 100)}%`;
+                          return (
+                            <Box
+                              key={month.month}
+                              sx={{
+                                borderRadius: 1.2,
+                                bgcolor: "rgba(124,168,217,0.12)",
+                                p: 1,
+                                minWidth: 0,
+                              }}
+                            >
+                              <Box sx={{ height: 90, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+                                <Box
+                                  sx={{
+                                    width: "70%",
+                                    height,
+                                    bgcolor: "#7ca8d9",
+                                    borderRadius: 0.6,
+                                    transition: "height 220ms ease",
+                                  }}
+                                />
+                              </Box>
+                              <Typography sx={{ mt: 0.6, textAlign: "center", fontWeight: 700, fontSize: 12 }}>
+                                {month.month}
+                              </Typography>
+                              <Typography variant="caption" sx={{ display: "block", textAlign: "center", color: "text.secondary", fontSize: 11 }}>
+                                {formatMoney(month.amount)}
+                              </Typography>
+                            </Box>
+                          );
+                        })}
+                      </Box>
+
+                      <Stack
+                        direction="row"
+                        spacing={1.2}
+                        sx={{ display: { xs: "none", sm: "flex" }, minHeight: 200, overflowX: "auto", pb: 0.6, alignItems: "flex-end", justifyContent: "space-between" }}
+                      >
+                        {monthlyBreakdown.map((month) => {
+                          const height = `${Math.max(8, (month.amount / highestMonthlyAmount) * 100)}%`;
+                          return (
+                            <Box key={month.month} sx={{ flex: 1, minWidth: 0 }}>
+                              <Box
+                                sx={{
+                                  height: 140,
+                                  display: "flex",
+                                  alignItems: "flex-end",
+                                  justifyContent: "center",
+                                }}
+                              >
+                                <Box
+                                  sx={{
+                                    width: "78%",
+                                    height,
+                                    bgcolor: "#7ca8d9",
+                                    borderRadius: 0.6,
+                                    transition: "height 220ms ease",
+                                  }}
+                                />
+                              </Box>
+                              <Typography sx={{ mt: 0.8, textAlign: "center", fontWeight: 700 }}>{month.month}</Typography>
+                              <Typography variant="caption" sx={{ display: "block", textAlign: "center", color: "text.secondary" }}>
+                                {formatMoney(month.amount)}
+                              </Typography>
+                            </Box>
+                          );
+                        })}
+                      </Stack>
+                    </Stack>
+                  </CardContent>
+                </Card>
+              </Stack>
+            </Box>
+          ) : (
+            <Stack spacing={2}>
+              <Card sx={{ borderRadius: 1.5, background: "rgba(255,255,255,0.82)" }}>
+                <CardContent sx={{ p: 2.4 }}>
+                  <Typography variant="h5" sx={{ fontWeight: 800, mb: 2 }}>
+                    Add Member
+                  </Typography>
+                  <Stack direction={{ xs: "column", md: "row" }} spacing={1.2}>
+                    <TextField
+                      value={newMemberIdentifier}
+                      onChange={(event) => setNewMemberIdentifier(event.target.value)}
+                      placeholder="Email or Username"
+                      fullWidth
+                    />
+                    <Button
+                      variant="contained"
+                      onClick={() => void handleMemberAdd()}
+                      disabled={memberBusy || newMemberIdentifier.trim().length === 0}
+                      sx={{
+                        minWidth: 92,
+                        bgcolor: "#f09cae",
+                        fontWeight: 800,
+                        textTransform: "none",
+                      }}
+                    >
+                      Add
+                    </Button>
+                  </Stack>
+                </CardContent>
+              </Card>
+
+              <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" } }}>
+                {(group?.members ?? []).filter(Boolean).map((member) => {
+                  if (!member) {
+                    return null;
+                  }
+
+                  const isAdmin = group?.adminIds.includes(member.id) ?? false;
+                  const canDelete = Boolean(group?.isAdmin && !isAdmin);
+
+                  return (
+                    <Card key={member.id} sx={{ borderRadius: 1.5, background: "rgba(255,255,255,0.82)" }}>
+                      <CardContent sx={{ p: 2.4 }}>
+                        <Stack direction="row" spacing={1.2} sx={{ justifyContent: "space-between", alignItems: "flex-start" }}>
+                          <Box>
+                            <Typography sx={{ fontWeight: 800, fontSize: { xs: 22, md: 30 }, lineHeight: 1 }}>{member.username}</Typography>
+                            <Typography sx={{ mt: 0.8, color: "text.secondary", fontSize: { xs: 15, md: 22 } }}>{member.email}</Typography>
+                          </Box>
+                          {isAdmin ? (
+                            <Chip label="Admin" sx={{ bgcolor: "#dcebff", color: "#2f78c9", fontWeight: 800 }} />
+                          ) : null}
+                          {canDelete ? (
+                            <Button
+                              variant="text"
+                              color="error"
+                              disabled={memberBusy}
+                              onClick={() => void handleMemberRemove(member.id)}
+                              sx={{ minWidth: 0, p: 0.4 }}
+                            >
+                              <DeleteOutlineRoundedIcon />
+                            </Button>
+                          ) : null}
+                        </Stack>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </Box>
+
+              <Stack direction="row" spacing={1.2} sx={{ pt: 1, justifyContent: "flex-end" }}>
+                <Button color="error" variant="outlined" onClick={() => void handleLeaveGroup()} disabled={groupActionBusy}>
+                  Leave Group
+                </Button>
+                <Button
+                  color="error"
+                  variant="outlined"
+                  onClick={() => void handleDeleteGroup()}
+                  disabled={groupActionBusy || !group?.isAdmin}
+                  sx={{ opacity: group?.isAdmin ? 1 : 0.5 }}
+                >
+                  Delete Group
+                </Button>
+              </Stack>
+            </Stack>
+          )}
+        </Stack>
+      </Container>
+    </Box>
+  );
+}
+
+function readableCategory(category: string) {
+  if (category === "food") return "Food & Dining";
+  return category.charAt(0).toUpperCase() + category.slice(1);
+}
+
+function categoryColor(category: string) {
+  if (category === "groceries") return "#56a069";
+  if (category === "transport") return "#0f8f93";
+  if (category === "utilities") return "#2f78c9";
+  if (category === "entertainment") return "#d7568f";
+  if (category === "food") return "#f07a2b";
+  if (category === "rent") return "#638fc6";
+  return "#8c96a4";
+}
+
+function touchesCurrentGroup(message: unknown, groupId: number) {
+  try {
+    const parsed = (typeof message === "string" ? JSON.parse(message) : message) as { type?: string; data?: unknown };
+    const data = parsed?.data;
+    if (typeof data !== "object" || data === null) {
+      return true;
+    }
+
+    if ("groupId" in data && typeof (data as { groupId?: unknown }).groupId === "number") {
+      return (data as { groupId: number }).groupId === groupId;
+    }
+
+    if ("id" in data && parsed.type?.startsWith("group.")) {
+      return typeof (data as { id?: unknown }).id !== "number" || (data as { id: number }).id === groupId;
+    }
+
+    return true;
+  } catch {
+    return true;
+  }
+}
