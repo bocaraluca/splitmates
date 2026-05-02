@@ -107,7 +107,9 @@ export function GroupPreviewPage({ groupId }: { groupId: number }) {
       setExpensePage(1);
       setExpenseTotalPages(expensesResponse.totalPages);
       setPrefetchedExpenses(null);
+
       setStats(statsResponse.stats);
+      
       setGeneratorRunning(Boolean(healthResponse.generator?.running && healthResponse.generator?.groupId === groupId));
       setGroupError(null);
     } catch (error) {

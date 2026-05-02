@@ -1,10 +1,10 @@
-﻿import { expenseSchema } from "@/lib/splitmates/validation/schemas";
+import { expenseSchema } from "@/lib/splitmates/validation/schemas";
 import { jsonError, jsonOk } from "@/lib/splitmates/api/http";
 import {
   deleteExpense,
   getExpenseDetailForGroup,
   getGroupById,
-  resolveCurrentUser,
+  getCurrentUserFromRequest,
   updateExpense,
 } from "@/lib/splitmates";
 
@@ -18,12 +18,12 @@ export async function GET(request: Request, context: { params: Promise<{ groupId
     return jsonError("Invalid id.", 400);
   }
 
-  if (!getGroupById(groupId)) {
+  if (!await getGroupById(groupId)) {
     return jsonError("Group not found.", 404);
   }
 
-  const viewer = resolveCurrentUser(request);
-  const expense = getExpenseDetailForGroup(groupId, expenseId, viewer?.id);
+  const viewer = await getCurrentUserFromRequest(request);
+  const expense = await getExpenseDetailForGroup(groupId, expenseId, viewer?.id);
   if (!expense) {
     return jsonError("Expense not found.", 404);
   }
@@ -33,7 +33,7 @@ export async function GET(request: Request, context: { params: Promise<{ groupId
 
 export async function PATCH(request: Request, context: { params: Promise<{ groupId: string; expenseId: string }> }) {
   try {
-    const actor = resolveCurrentUser(request);
+    const actor = await getCurrentUserFromRequest(request);
     if (!actor) {
       return jsonError("You must be logged in to edit an expense.", 401);
     }
@@ -47,7 +47,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ group
 
     const body = await request.json();
     const input = expenseSchema.parse(body);
-    const expense = updateExpense(groupId, expenseId, actor.id, input);
+    const expense = await updateExpense(groupId, expenseId, actor.id, input);
 
     if (!expense) {
       return jsonError("Expense not found.", 404);
@@ -62,7 +62,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ group
 
 export async function DELETE(request: Request, context: { params: Promise<{ groupId: string; expenseId: string }> }) {
   try {
-    const actor = resolveCurrentUser(request);
+    const actor = await getCurrentUserFromRequest(request);
     if (!actor) {
       return jsonError("You must be logged in to delete an expense.", 401);
     }
@@ -74,7 +74,7 @@ export async function DELETE(request: Request, context: { params: Promise<{ grou
       return jsonError("Invalid id.", 400);
     }
 
-    const expense = deleteExpense(groupId, expenseId, actor.id);
+    const expense = await deleteExpense(groupId, expenseId, actor.id);
 
     if (!expense) {
       return jsonError("Expense not found.", 404);

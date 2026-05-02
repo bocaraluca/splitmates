@@ -4,6 +4,7 @@ import { getHealthSnapshot } from "@/lib/splitmates";
 export const runtime = "nodejs";
 
 export async function GET() {
-  return jsonOk({ ok: true, ...getHealthSnapshot() });
+  return jsonOk({ ok: true, ...(await getHealthSnapshot()) });
 }
+
 

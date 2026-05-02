@@ -9,6 +9,10 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    fileParallelism: false,
+    maxWorkers: 1,
+    minWorkers: 1,
+    setupFiles: ["./src/test-db/global-setup.ts"],
     coverage: {
       provider: "v8",
       reporter: ["text", "html", "json-summary"],

@@ -1,14 +1,15 @@
 import { jsonClearSession, jsonError } from "@/lib/splitmates/api/http";
-import { clearSessionToken, resolveSessionToken } from "@/lib/splitmates/services/auth/session";
+import { revokeSessionToken, readSessionTokenFromRequest } from "@/lib/splitmates/services/auth/session-service";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   try {
-    const token = resolveSessionToken(request);
-    clearSessionToken(token);
+    const token = readSessionTokenFromRequest(request);
+    revokeSessionToken(token);
     return jsonClearSession();
   } catch {
     return jsonError("Unable to log out.", 400);
   }
 }
+

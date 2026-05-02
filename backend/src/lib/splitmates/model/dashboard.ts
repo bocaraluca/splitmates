@@ -51,3 +51,4 @@ export interface GroupStats {
   months: MonthStat[];
   balance: BalanceSummary;
 }
+

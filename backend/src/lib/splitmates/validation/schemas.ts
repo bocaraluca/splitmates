@@ -31,7 +31,7 @@ export const addGroupMemberSchema = z.object({
   identifier: z.string().trim().min(3, "Username or email must be at least 3 characters.").max(120, "Username or email must be 120 characters or fewer."),
 });
 
-export const settlementSchema = z
+export const paymentSchema = z
   .object({
     fromUserId: idSchema,
     toUserId: idSchema,
@@ -40,7 +40,7 @@ export const settlementSchema = z
     note: z.string().trim().max(160).optional(),
   })
   .refine((value) => value.fromUserId !== value.toUserId, {
-    message: "A settlement must involve two different users.",
+    message: "A Payment must involve two different users.",
     path: ["toUserId"],
   });
 
@@ -117,3 +117,4 @@ export const dashboardSchema = z.object({
 export const generatorSchema = z.object({
   groupId: idSchema.optional(),
 });
+

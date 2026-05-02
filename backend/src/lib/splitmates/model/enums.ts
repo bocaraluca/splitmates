@@ -1,4 +1,4 @@
-export const GROUP_CATEGORIES = ["household", "trip", "friends", "roommates", "other"] as const;
+export const GROUP_CATEGORIES = ["household", "trip", "friends", "family", "roommates", "other"] as const;
 
 export const EXPENSE_CATEGORIES = [
   "rent",
@@ -13,3 +13,4 @@ export const EXPENSE_CATEGORIES = [
 export type GroupCategory = (typeof GROUP_CATEGORIES)[number];
 export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number];
 export type SplitType = "equal" | "custom";
+

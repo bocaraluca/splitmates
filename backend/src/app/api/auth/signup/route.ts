@@ -9,7 +9,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const input = signupSchema.parse(body);
-    const session = signupUser({
+    const session = await signupUser({
       username: input.username,
       email: input.email,
       password: input.password,

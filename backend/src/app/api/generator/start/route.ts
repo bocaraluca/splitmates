@@ -8,11 +8,12 @@ export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => ({}));
     const input = generatorSchema.parse(body);
-    const status = startGenerator(input.groupId ?? null);
+    const status = await startGenerator(input.groupId ?? null);
     return jsonOk({ status });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to start fake expense generation.";
     return jsonError(message, 400);
   }
 }
+
 

@@ -7,3 +7,4 @@ export async function GET() {
   return jsonOk({ status: getGeneratorStatus() });
 }
 
+

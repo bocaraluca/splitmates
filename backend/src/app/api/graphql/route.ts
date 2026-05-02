@@ -4,7 +4,7 @@ import {
   addMemberToGroup,
   createExpense,
   createGroup,
-  createSettlement,
+  createPayment,
   deleteExpense,
   deleteGroup,
   getDashboardSummary,
@@ -15,19 +15,19 @@ import {
   getUserById,
   getUsers,
   leaveGroup,
-  listExpenses,
-  listGroups,
-  listSettlements,
+  getExpenses,
+  getGroups,
+  getPayments,
   loginUser,
   removeMemberFromGroup,
   signupUser,
-  resolveCurrentUser,
+  getCurrentUserFromRequest,
   startGenerator,
   stopGenerator,
   updateExpense,
   updateGroup,
 } from "@/lib/splitmates";
-import { addGroupMemberSchema, createGroupSchema, expenseSchema, paginationSchema, settlementSchema, signupSchema } from "@/lib/splitmates/validation/schemas";
+import { addGroupMemberSchema, createGroupSchema, expenseSchema, paginationSchema, paymentSchema, signupSchema } from "@/lib/splitmates/validation/schemas";
 
 export const runtime = "nodejs";
 
@@ -123,7 +123,7 @@ const schema = buildSchema(`
     balance: GroupBalanceSummary!
   }
 
-  type Settlement {
+  type Payment {
     id: Int!
     groupId: Int!
     fromUserId: Int!
@@ -158,8 +158,8 @@ const schema = buildSchema(`
     expense: Expense!
   }
 
-  type SettlementPayload {
-    settlement: Settlement!
+  type PaymentPayload {
+    Payment: Payment!
   }
 
   type GeneratorPayload {
@@ -204,7 +204,7 @@ const schema = buildSchema(`
     shares: [ShareInput!]!
   }
 
-  input SettlementInput {
+  input PaymentInput {
     fromUserId: Int!
     toUserId: Int!
     amount: Float!
@@ -219,7 +219,7 @@ const schema = buildSchema(`
     expenses(groupId: Int!, pagination: PaginationInput): ExpenseList!
     expense(groupId: Int!, expenseId: Int!): Expense
     groupStats(groupId: Int!): GroupStats
-    settlements(groupId: Int!): [Settlement!]!
+    payments(groupId: Int!): [Payment!]!
     generatorStatus: GeneratorStatus!
     dashboard: DashboardSummary
   }
@@ -240,7 +240,7 @@ const schema = buildSchema(`
     updateExpense(groupId: Int!, expenseId: Int!, input: ExpenseInput!): ExpensePayload!
     deleteExpense(groupId: Int!, expenseId: Int!): ExpensePayload!
 
-    createSettlement(groupId: Int!, input: SettlementInput!): SettlementPayload!
+    createPayment(groupId: Int!, input: PaymentInput!): PaymentPayload!
 
     startGenerator(groupId: Int): GeneratorPayload!
     stopGenerator: GeneratorPayload!
@@ -253,37 +253,42 @@ type GraphqlRequest = {
   operationName?: string;
 };
 
-function mapGroup(groupId: number, request: Request) {
-  const group = getGroupById(groupId);
+async function mapGroup(groupId: number, request: Request) {
+  const group = await getGroupById(groupId);
   if (!group) {
     return null;
   }
 
-  const currentUser = resolveCurrentUser(request);
+  const currentUser = await getCurrentUserFromRequest(request);
   return mapGroupForResponse(group, currentUser?.id ?? -1);
 }
 
-function mapExpense(expense: {
-  id: number;
-  groupId: number;
-  title: string;
-  amount: number;
-  currency: "RON";
-  category: string;
-  date: string;
-  paidByUserId: number;
-  splitType: "equal" | "custom";
-  memberIds: number[];
-  shares: Array<{ userId: number; amount: number }>;
-}) {
+async function mapExpense(expense: any) {
+  const memberIds: number[] = expense.memberIds ?? (expense.participants ? expense.participants.map((p: any) => p.userId) : []);
+  const shares: Array<{ userId: number; amount: number }> =
+    expense.shares ?? (expense.participants ? expense.participants.map((p: any) => ({ userId: p.userId, amount: Number(p.amount) })) : []);
+
+  const paidByUserId = expense.paidByUserId ?? expense.paidBy?.id ?? expense.paidByUser?.id ?? null;
+  const paidBy = expense.paidBy ?? (paidByUserId ? await getUserById(paidByUserId) : null);
+
   return {
-    ...expense,
-    paidBy: getUserById(expense.paidByUserId),
+    id: expense.id,
+    groupId: expense.groupId,
+    title: expense.title,
+    amount: Number(expense.amount),
+    currency: expense.currency ?? "RON",
+    category: expense.category,
+    date: typeof expense.date === "string" ? expense.date : expense.date?.toISOString?.(),
+    paidByUserId,
+    splitType: expense.splitType,
+    memberIds,
+    shares,
+    paidBy,
   };
 }
 
-function requireCurrentUser(request: Request) {
-  const actor = resolveCurrentUser(request);
+async function requireCurrentUser(request: Request) {
+  const actor = await getCurrentUserFromRequest(request);
   if (!actor) {
     throw new Error("You must be logged in.");
   }
@@ -309,29 +314,33 @@ function parseExpenseInput(input: Record<string, unknown>) {
 
 function rootValue(request: Request) {
   return {
-    me: () => resolveCurrentUser(request),
+    me: async () => await getCurrentUserFromRequest(request),
 
-    groups: () => listGroups().map((group) => mapGroup(group.id, request)),
+    groups: async () => {
+      const groups = await getGroups();
+      return await Promise.all(groups.map((group) => mapGroup(group.id, request)));
+    },
 
     group: ({ groupId }: { groupId: number }) => mapGroup(groupId, request),
 
-    expenses: ({ groupId, pagination }: { groupId: number; pagination?: Record<string, unknown> }) => {
+    expenses: async ({ groupId, pagination }: { groupId: number; pagination?: Record<string, unknown> }) => {
       const parsed = paginationSchema.parse(pagination ?? {});
-      const result = listExpenses(groupId, parsed.page, parsed.pageSize, parsed.sortBy, parsed.sortOrder, parsed.category, parsed.paidByUserId);
+      const result = await getExpenses(groupId, parsed.page, parsed.pageSize, parsed.sortBy, parsed.sortOrder, parsed.category, parsed.paidByUserId);
       return result;
     },
 
-    expense: ({ groupId, expenseId }: { groupId: number; expenseId: number }) => {
-      const detail = getExpenseDetailForGroup(groupId, expenseId, resolveCurrentUser(request)?.id);
+    expense: async ({ groupId, expenseId }: { groupId: number; expenseId: number }) => {
+      const currentUser = await getCurrentUserFromRequest(request);
+      const detail = await getExpenseDetailForGroup(groupId, expenseId, currentUser?.id);
       if (!detail) {
         return null;
       }
 
-      return mapExpense(detail.expense);
+      return await mapExpense(detail.expense);
     },
 
-    groupStats: ({ groupId }: { groupId: number }) => {
-      const stats = getGroupStats(groupId);
+    groupStats: async ({ groupId }: { groupId: number }) => {
+      const stats = await getGroupStats(groupId);
       if (!stats) {
         return null;
       }
@@ -351,113 +360,115 @@ function rootValue(request: Request) {
       };
     },
 
-    settlements: ({ groupId }: { groupId: number }) => listSettlements(groupId),
+    payments: async ({ groupId }: { groupId: number }) => await getPayments(groupId),
 
     generatorStatus: () => getGeneratorStatus(),
 
-    dashboard: () => {
-      const currentUser = resolveCurrentUser(request) ?? getUsers()[0] ?? null;
+    dashboard: async () => {
+      const currentUser = (await getCurrentUserFromRequest(request)) ?? (await getUsers())[0] ?? null;
       if (!currentUser) {
         return null;
       }
 
-      const summary = getDashboardSummary(currentUser.id);
+      const summary = await getDashboardSummary(currentUser.id);
       return {
         userId: currentUser.id,
         overall: JSON.stringify(summary.overall),
       };
     },
 
-    signup: ({ username, email, password, confirmPassword }: { username: string; email: string; password: string; confirmPassword: string }) => {
+    signup: async ({ username, email, password, confirmPassword }: { username: string; email: string; password: string; confirmPassword: string }) => {
       const parsed = signupSchema.parse({ username, email, password, confirmPassword });
-      return signupUser({ username: parsed.username, email: parsed.email, password: parsed.password });
+      return await signupUser({ username: parsed.username, email: parsed.email, password: parsed.password });
     },
 
-    login: ({ identifier, password }: { identifier: string; password: string }) => loginUser({ identifier, password }),
+    login: async ({ identifier, password }: { identifier: string; password: string }) => await loginUser({ identifier, password }),
 
-    createGroup: ({ input }: { input: Record<string, unknown> }) => {
-      const actor = requireCurrentUser(request);
+    createGroup: async ({ input }: { input: Record<string, unknown> }) => {
+      const actor = await requireCurrentUser(request);
       const parsed = createGroupSchema.parse(input);
-      const group = createGroup(parsed, actor.id);
-      return { group: mapGroup(group.id, request) };
+      const group = await createGroup(parsed, actor.id);
+      return { group: await mapGroup(group.id, request) };
     },
 
-    updateGroup: ({ groupId, input }: { groupId: number; input: Record<string, unknown> }) => {
-      const actor = requireCurrentUser(request);
+    updateGroup: async ({ groupId, input }: { groupId: number; input: Record<string, unknown> }) => {
+      const actor = await requireCurrentUser(request);
       const parsed = createGroupSchema.partial().parse(input);
-      const group = updateGroup(groupId, parsed, actor.id);
+      const group = await updateGroup(groupId, parsed, actor.id);
       if (!group) {
         throw new Error("Group not found.");
       }
-      return { group: mapGroup(group.id, request) };
+      return { group: await mapGroup(group.id, request) };
     },
 
-    deleteGroup: ({ groupId }: { groupId: number }) => {
-      const actor = requireCurrentUser(request);
-      const group = deleteGroup(groupId, actor.id);
+    deleteGroup: async ({ groupId }: { groupId: number }) => {
+      const actor = await requireCurrentUser(request);
+      const group = await deleteGroup(groupId, actor.id);
       if (!group) {
         throw new Error("Group not found.");
       }
       return { group: { ...group, members: [], admins: [], isMember: false, isAdmin: false } };
     },
 
-    addMember: ({ groupId, identifier }: { groupId: number; identifier: string }) => {
-      const actor = requireCurrentUser(request);
+    addMember: async ({ groupId, identifier }: { groupId: number; identifier: string }) => {
+      const actor = await requireCurrentUser(request);
       const parsed = addGroupMemberSchema.parse({ identifier });
-      const group = addMemberToGroup(groupId, parsed.identifier, actor.id);
-      return { group: mapGroup(group.id, request) };
+      const group = await addMemberToGroup(groupId, parsed.identifier, actor.id);
+      return { group: await mapGroup(group.id, request) };
     },
 
-    removeMember: ({ groupId, userId }: { groupId: number; userId: number }) => {
-      const actor = requireCurrentUser(request);
-      const group = removeMemberFromGroup(groupId, userId, actor.id);
+    removeMember: async ({ groupId, userId }: { groupId: number; userId: number }) => {
+      const actor = await requireCurrentUser(request);
+      const group = await removeMemberFromGroup(groupId, userId, actor.id);
       return {
-        group: mapGroup(group.id, request) ?? { ...group, members: [], admins: [], isMember: false, isAdmin: false },
+        group: (await mapGroup(group.id, request)) ?? { ...group, members: [], admins: [], isMember: false, isAdmin: false },
       };
     },
 
-    leaveGroup: ({ groupId }: { groupId: number }) => {
-      const actor = requireCurrentUser(request);
-      const group = leaveGroup(groupId, actor.id);
+    leaveGroup: async ({ groupId }: { groupId: number }) => {
+      const actor = await requireCurrentUser(request);
+      const group = await leaveGroup(groupId, actor.id);
       return {
-        group: mapGroup(group.id, request) ?? { ...group, members: [], admins: [], isMember: false, isAdmin: false },
+        group: (await mapGroup(group.id, request)) ?? { ...group, members: [], admins: [], isMember: false, isAdmin: false },
       };
     },
 
-    createExpense: ({ groupId, input }: { groupId: number; input: Record<string, unknown> }) => {
-      const actor = requireCurrentUser(request);
+    createExpense: async ({ groupId, input }: { groupId: number; input: Record<string, unknown> }) => {
+      const actor = await requireCurrentUser(request);
       const parsed = parseExpenseInput(input);
-      const expense = createExpense(groupId, actor.id, parsed);
-      return { expense: mapExpense(expense) };
+      const expense = await createExpense(groupId, actor.id, parsed);
+      return { expense: await mapExpense(expense) };
     },
 
-    updateExpense: ({ groupId, expenseId, input }: { groupId: number; expenseId: number; input: Record<string, unknown> }) => {
-      const actor = requireCurrentUser(request);
+    updateExpense: async ({ groupId, expenseId, input }: { groupId: number; expenseId: number; input: Record<string, unknown> }) => {
+      const actor = await requireCurrentUser(request);
       const parsed = parseExpenseInput(input);
-      const expense = updateExpense(groupId, expenseId, actor.id, parsed);
+      const expense = await updateExpense(groupId, expenseId, actor.id, parsed);
       if (!expense) {
         throw new Error("Expense not found.");
       }
-      return { expense: mapExpense(expense) };
+      return { expense: await mapExpense(expense) };
     },
 
-    deleteExpense: ({ groupId, expenseId }: { groupId: number; expenseId: number }) => {
-      const actor = requireCurrentUser(request);
-      const expense = deleteExpense(groupId, expenseId, actor.id);
+    deleteExpense: async ({ groupId, expenseId }: { groupId: number; expenseId: number }) => {
+      const actor = await requireCurrentUser(request);
+      const expense = await deleteExpense(groupId, expenseId, actor.id);
       if (!expense) {
         throw new Error("Expense not found.");
       }
-      return { expense: mapExpense(expense) };
+      return { expense: await mapExpense(expense) };
     },
 
-    createSettlement: ({ groupId, input }: { groupId: number; input: Record<string, unknown> }) => {
-      const actor = requireCurrentUser(request);
-      const parsed = settlementSchema.parse(input);
-      const settlement = createSettlement(groupId, actor.id, parsed);
-      return { settlement };
+    createPayment: async ({ groupId, input }: { groupId: number; input: Record<string, unknown> }) => {
+      const actor = await requireCurrentUser(request);
+      const parsed = paymentSchema.parse(input);
+      const payment = await createPayment(groupId, actor.id, parsed);
+      return { Payment: payment };
     },
 
-    startGenerator: ({ groupId }: { groupId?: number }) => ({ status: startGenerator(groupId ?? null) }),
+    startGenerator: async ({ groupId }: { groupId?: number }) => ({
+      status: await startGenerator(groupId ?? null),
+    }),
 
     stopGenerator: () => ({ status: stopGenerator() }),
   };
@@ -489,3 +500,4 @@ export async function POST(request: Request) {
     return Response.json({ errors: [{ message }] }, { status: 400 });
   }
 }
+

@@ -9,12 +9,20 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const input = loginSchema.parse(body);
-    const session = loginUser(input);
+    const session = await loginUser(input);
 
     return jsonSessionOk(session, session.token);
   } catch (error) {
+    if (error instanceof SyntaxError) {
+      return jsonError("Request body must be valid JSON.", 400);
+    }
+
     const message = formatValidationError(error, "Unable to log in.");
+
+    if (message === "Invalid login credentials.") {
+      return jsonError(message, 401);
+    }
+
     return jsonError(message, 400);
   }
 }
-

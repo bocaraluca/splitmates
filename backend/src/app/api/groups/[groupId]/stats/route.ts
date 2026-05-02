@@ -1,4 +1,4 @@
-﻿import { jsonError, jsonOk } from "@/lib/splitmates/api/http";
+import { jsonError, jsonOk } from "@/lib/splitmates/api/http";
 import { getGroupStats, getGroupById } from "@/lib/splitmates";
 
 export const runtime = "nodejs";
@@ -9,11 +9,10 @@ export async function GET(_request: Request, context: { params: Promise<{ groupI
     return jsonError("Invalid group id.", 400);
   }
 
-  if (!getGroupById(groupId)) {
+  if (!(await getGroupById(groupId))) {
     return jsonError("Group not found.", 404);
   }
 
-  const stats = getGroupStats(groupId);
+  const stats = await getGroupStats(groupId);
   return jsonOk({ stats });
 }
-

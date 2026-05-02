@@ -16,3 +16,4 @@ export interface SessionRecord {
   userId: Id;
   createdAt: string;
 }
+

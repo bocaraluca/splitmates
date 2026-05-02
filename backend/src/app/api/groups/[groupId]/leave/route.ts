@@ -1,12 +1,12 @@
-﻿import { jsonError, jsonOk } from "@/lib/splitmates/api/http";
-import { leaveGroup, resolveCurrentUser } from "@/lib/splitmates";
+import { jsonError, jsonOk } from "@/lib/splitmates/api/http";
+import { leaveGroup, getCurrentUserFromRequest } from "@/lib/splitmates";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request, context: { params: Promise<{ groupId: string }> }) {
   try {
-    const actor = resolveCurrentUser(request);
-    if (!actor) {
+    const currentUser = await getCurrentUserFromRequest(request);
+    if (!currentUser) {
       return jsonError("You must be logged in to leave a group.", 401);
     }
 
@@ -15,7 +15,7 @@ export async function POST(request: Request, context: { params: Promise<{ groupI
       return jsonError("Invalid group id.", 400);
     }
 
-    const group = leaveGroup(groupId, actor.id);
+    const group = await leaveGroup(groupId, currentUser.id);
 
     return jsonOk({ group });
   } catch (error) {

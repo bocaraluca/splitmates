@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import MenuIcon from "@mui/icons-material/MenuRounded";
 import { AppBar, Box, Button, Container, IconButton, Menu, MenuItem, Stack, Toolbar, Typography } from "@mui/material";
@@ -13,7 +13,11 @@ export function AppNavbar() {
   const router = useRouter();
   const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(null);
   const [mobileMenuAnchor, setMobileMenuAnchor] = useState<null | HTMLElement>(null);
-  const [username, setUsername] = useState(getUsername);
+  const [username, setUsername] = useState(DEFAULT_USERNAME);
+
+  useEffect(() => {
+    setUsername(getUsername());
+  }, []);
 
   const userMenuOpen = Boolean(userMenuAnchor);
   const mobileMenuOpen = Boolean(mobileMenuAnchor);

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { SESSION_COOKIE_NAME } from "@/lib/splitmates/services/auth/session";
+import { SESSION_COOKIE_NAME } from "@/lib/splitmates/services/auth/session-service";
 
 export function jsonError(message: string, status = 400) {
   return NextResponse.json({ error: message }, { status });
@@ -32,3 +32,4 @@ export function jsonClearSession(message = "Logged out.") {
   });
   return response;
 }
+

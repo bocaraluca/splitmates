@@ -1,0 +1,139 @@
+generator client {
+  provider = "prisma-client-js"
+  engineType = "library"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model User {
+  id Int @id @default(autoincrement())
+  username String  @unique
+  email  String   @unique
+  passwordHash String
+  createdAt DateTime @default(now())
+
+  sessions Session[]
+  groupsCreated Group[]  @relation("GroupCreatedBy")
+  memberships GroupMember[]
+  expensesPaid Expense[]  @relation("ExpensePaidBy")
+  participatedExpenses  ExpenseParticipant[]
+  paymentsFrom Payment[]  @relation("PaymentFromUser")
+  paymentsTo Payment[]  @relation("PaymentToUser")
+}
+
+model Group {
+  id Int @id @default(autoincrement())
+  name String
+  description String?
+  category GroupCategory
+  createdAt DateTime @default(now())
+
+  createdByUserId Int
+  createdByUser User @relation("GroupCreatedBy", fields: [createdByUserId], references: [id])
+  
+  members GroupMember[]
+  expenses Expense[]     
+  payments Payment[]     
+}
+
+enum GroupCategory {
+  household
+  trip
+  friends
+  family
+  roommates
+  other
+}
+
+model GroupMember {
+  groupId Int
+  userId Int
+  @@id([groupId, userId])
+
+  joinedAt DateTime @default(now())
+  isAdmin Boolean @default(false)
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Expense {
+  id Int @id @default(autoincrement())
+  groupId Int
+  paidByUserId Int
+  title  String
+  amount Decimal @db.Decimal(10, 2)
+  category ExpenseCategory
+  date DateTime
+  splitType SplitType
+  createdAt DateTime @default(now())
+  
+  participants ExpenseParticipant[]
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade) 
+  paidByUser User @relation("ExpensePaidBy", fields: [paidByUserId], references: [id])
+
+  @@index([groupId])
+  @@index([date])
+  @@index([category])
+  @@index([paidByUserId])
+}
+
+enum ExpenseCategory {
+  rent
+  groceries
+  utilities
+  transport
+  entertainment
+  food
+  other
+}
+
+enum SplitType {
+  equal
+  custom
+}
+
+model ExpenseParticipant {
+  expenseId Int
+  userId Int
+  @@id([expenseId, userId])
+
+  amount Decimal @db.Decimal(10, 2)
+
+  expense Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Payment {
+  id Int @id @default(autoincrement())
+  groupId Int
+  fromUserId Int
+  toUserId Int
+  amount Decimal  @db.Decimal(10, 2)
+  createdAt DateTime @default(now())
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  fromUser User @relation("PaymentFromUser", fields: [fromUserId], references: [id])
+  toUser User @relation("PaymentToUser", fields: [toUserId], references: [id])
+
+  @@index([groupId])
+  @@index([fromUserId])
+  @@index([toUserId])
+}
+
+model Session {
+  id Int @id @default(autoincrement())
+  token String  @unique
+  userId Int
+  createdAt DateTime  @default(now())
+  expiresAt DateTime
+  revokedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}

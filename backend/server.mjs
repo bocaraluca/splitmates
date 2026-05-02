@@ -4,7 +4,7 @@ import { WebSocketServer, WebSocket } from "ws";
 
 const isProduction = process.argv.includes("--production") || process.env.NODE_ENV === "production";
 const isDevelopment = process.argv.includes("--dev") || !isProduction;
-const hostname = "localhost";
+const hostname = process.env.HOST ?? "0.0.0.0";
 const port = 4000;
 
 const app = next({ dev: isDevelopment, hostname, port });

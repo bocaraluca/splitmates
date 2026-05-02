@@ -1,11 +1,11 @@
-﻿import { createGroupSchema } from "@/lib/splitmates/validation/schemas";
+import { createGroupSchema } from "@/lib/splitmates/validation/schemas";
 import { jsonError, jsonOk } from "@/lib/splitmates/api/http";
 import { mapGroupForResponse } from "@/lib/splitmates/api/group-response";
 import {
   deleteGroup,
   getDashboardSummary,
   getGroupById,
-  resolveCurrentUser,
+  getCurrentUserFromRequest,
   updateGroup,
 } from "@/lib/splitmates";
 
@@ -17,12 +17,12 @@ export async function GET(request: Request, context: { params: Promise<{ groupId
     return jsonError("Invalid group id.", 400);
   }
 
-  const group = getGroupById(groupId);
+  const group = await getGroupById(groupId);
   if (!group) {
     return jsonError("Group not found.", 404);
   }
 
-  const currentUser = resolveCurrentUser(request);
+  const currentUser = await getCurrentUserFromRequest(request);
   if (!currentUser) {
     return jsonError("You must be logged in to view this group.", 401);
   }
@@ -32,14 +32,14 @@ export async function GET(request: Request, context: { params: Promise<{ groupId
   }
 
   return jsonOk({
-    group: mapGroupForResponse(group, currentUser.id),
-    dashboard: getDashboardSummary(currentUser.id),
+    group: await mapGroupForResponse(group, currentUser.id),
+    dashboard: await getDashboardSummary(currentUser.id),
   });
 }
 
 export async function PATCH(request: Request, context: { params: Promise<{ groupId: string }> }) {
   try {
-    const actor = resolveCurrentUser(request);
+    const actor = await getCurrentUserFromRequest(request);
     if (!actor) {
       return jsonError("You must be logged in to update a group.", 401);
     }
@@ -51,7 +51,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ group
 
     const body = await request.json();
     const input = createGroupSchema.partial().parse(body);
-    const group = updateGroup(groupId, input, actor.id);
+    const group = await updateGroup(groupId, input, actor.id);
 
     if (!group) {
       return jsonError("Group not found.", 404);
@@ -66,7 +66,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ group
 
 export async function DELETE(request: Request, context: { params: Promise<{ groupId: string }> }) {
   try {
-    const actor = resolveCurrentUser(request);
+    const actor = await getCurrentUserFromRequest(request);
     if (!actor) {
       return jsonError("You must be logged in to delete a group.", 401);
     }
@@ -76,7 +76,7 @@ export async function DELETE(request: Request, context: { params: Promise<{ grou
       return jsonError("Invalid group id.", 400);
     }
 
-    const deleted = deleteGroup(groupId, actor.id);
+    const deleted = await deleteGroup(groupId, actor.id);
     if (!deleted) {
       return jsonError("Group not found.", 404);
     }
