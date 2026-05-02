@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(ipconfig)",
-      "Bash(npm test *)",
-      "Bash(git check-ignore *)"
-    ]
-  }
-}
