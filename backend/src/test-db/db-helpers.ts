@@ -13,11 +13,18 @@ export async function resetDatabase() {
 }
 
 export async function createTestUser(username: string, email: string, password = "secret123") {
+  const userRole = await prisma.role.upsert({
+    where: { title: "user" },
+    update: {},
+    create: { title: "user" },
+  });
+
   return prisma.user.create({
     data: {
       username,
       email,
       passwordHash: bcrypt.hashSync(password, 10),
+      roleId: userRole.id,
     },
   });
 }

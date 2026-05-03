@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { PrismaMariaDb } from "@prisma/adapter-mariadb";
+import { PrismaPg } from "@prisma/adapter-pg";
 import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { faker } from "@faker-js/faker";
@@ -9,7 +9,7 @@ if (!databaseUrl) {
   throw new Error("DATABASE_URL is not set.");
 }
 
-const adapter = new PrismaMariaDb(databaseUrl);
+const adapter = new PrismaPg({ connectionString: databaseUrl });
 const prisma = new PrismaClient({ adapter });
 
 const PASSWORD = "raluca";
@@ -81,6 +81,54 @@ async function deleteAllData() {
   await prisma.groupMember.deleteMany({});
   await prisma.group.deleteMany({});
   await prisma.user.deleteMany({});
+  await prisma.rolePermission.deleteMany({});
+  await prisma.permission.deleteMany({});
+  await prisma.role.deleteMany({});
+}
+
+async function seedRolesAndPermissions() {
+  const adminRole = await prisma.role.create({ data: { title: "admin" } });
+  const userRole = await prisma.role.create({ data: { title: "user" } });
+
+  const permissionTitles = [
+    "View all users",
+    "Delete user",
+    "Create group",
+    "Delete any group",
+    "View all groups",
+    "Create expense",
+    "Delete own expense",
+    "Delete any expense",
+    "Edit own expense",
+    "Edit any expense",
+    "Create payment",
+    "Delete any payment",
+    "Send chat messages",
+  ];
+
+  const permissions = await Promise.all(
+    permissionTitles.map((title) => prisma.permission.create({ data: { title } })),
+  );
+
+  await prisma.rolePermission.createMany({
+    data: permissions.map((permission) => ({ roleId: adminRole.id, permissionId: permission.id })),
+  });
+
+  const userPermissionTitles = new Set([
+    "Create group",
+    "Create expense",
+    "Delete own expense",
+    "Edit own expense",
+    "Create payment",
+    "Send chat messages",
+  ]);
+
+  const userPermissions = permissions.filter((p) => userPermissionTitles.has(p.title));
+  await prisma.rolePermission.createMany({
+    data: userPermissions.map((permission) => ({ roleId: userRole.id, permissionId: permission.id })),
+  });
+
+  return { adminRole, userRole };
 }
 
 async function seedExpensesForGroup(
@@ -129,19 +177,20 @@ async function seedExpensesForGroup(
 async function main() {
   await deleteAllData();
 
+  const { adminRole, userRole } = await seedRolesAndPermissions();
   const passwordHash = bcrypt.hashSync(PASSWORD, 10);
 
   const raluca = await prisma.user.create({
-    data: { username: "raluca", email: "raluca@gmail.com", passwordHash },
+    data: { username: "raluca", email: "raluca@gmail.com", passwordHash, roleId: adminRole.id },
   });
   const ana = await prisma.user.create({
-    data: { username: "ana", email: "ana@gmail.com", passwordHash },
+    data: { username: "ana", email: "ana@gmail.com", passwordHash, roleId: userRole.id },
   });
   const elena = await prisma.user.create({
-    data: { username: "elena", email: "elena@gmail.com", passwordHash },
+    data: { username: "elena", email: "elena@gmail.com", passwordHash, roleId: userRole.id },
   });
   const rares = await prisma.user.create({
-    data: { username: "rares", email: "rares@gmail.com", passwordHash },
+    data: { username: "rares", email: "rares@gmail.com", passwordHash, roleId: userRole.id },
   });
 
   const apartment = await prisma.group.create({

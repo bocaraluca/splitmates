@@ -1,10 +1,9 @@
 generator client {
   provider = "prisma-client-js"
-  engineType = "library"
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
 }
 
 model User {
@@ -14,6 +13,9 @@ model User {
   passwordHash String
   createdAt DateTime @default(now())
 
+  roleId Int
+  role Role @relation(fields: [roleId], references: [id])
+
   sessions Session[]
   groupsCreated Group[]  @relation("GroupCreatedBy")
   memberships GroupMember[]
@@ -21,6 +23,8 @@ model User {
   participatedExpenses  ExpenseParticipant[]
   paymentsFrom Payment[]  @relation("PaymentFromUser")
   paymentsTo Payment[]  @relation("PaymentToUser")
+
+  @@index([roleId])
 }
 
 model Group {
@@ -136,4 +140,33 @@ model Session {
 
   @@index([userId])
   @@index([expiresAt])
+}
+
+model Role {
+  id Int @id @default(autoincrement())
+  title String @unique
+  createdAt DateTime @default(now())
+
+  users User[]
+  rolePermissions RolePermission[]
+}
+
+model Permission {
+  id Int @id @default(autoincrement())
+  title String @unique
+  description String?
+  createdAt DateTime @default(now())
+
+  rolePermissions RolePermission[]
+}
+
+model RolePermission {
+  roleId Int
+  permissionId Int
+  @@id([roleId, permissionId])
+
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@index([permissionId])
 }

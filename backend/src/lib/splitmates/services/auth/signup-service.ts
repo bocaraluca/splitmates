@@ -30,11 +30,17 @@ export async function signupUser(input: SignupInput): Promise<LoginResponse> {
     throw new Error("Email already exists.");
   }
 
+  const userRole = await prisma.role.findUnique({ where: { title: "user" } });
+  if (!userRole) {
+    throw new Error("Default 'user' role is missing. Run the seed first.");
+  }
+
   const user = await prisma.user.create({
     data: {
       username,
       email,
       passwordHash: bcrypt.hashSync(input.password, 10),
+      roleId: userRole.id,
     },
   });
 

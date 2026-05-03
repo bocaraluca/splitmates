@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { PrismaMariaDb } from "@prisma/adapter-mariadb";
+import { PrismaPg } from "@prisma/adapter-pg";
 import "dotenv/config";
 
 const globalForPrisma = globalThis as unknown as {
@@ -12,7 +12,7 @@ if (!databaseUrl) {
   throw new Error("DATABASE_URL is not set.");
 }
 
-const adapter = new PrismaMariaDb(databaseUrl);
+const adapter = new PrismaPg({ connectionString: databaseUrl });
 
 export const prisma = globalForPrisma.prisma ?? new PrismaClient({ adapter });
 
