@@ -93,7 +93,9 @@ async function seedRolesAndPermissions() {
   const permissionTitles = [
     "View all users",
     "Delete user",
+    "Update user role",
     "Create group",
+    "Edit any group",
     "Delete any group",
     "View all groups",
     "Create expense",

@@ -160,4 +160,55 @@ export interface BackendStatus {
 export interface LoginResponse {
   token: string;
   user: User;
+  role: string;
+  permissions: string[];
+}
+
+export interface ChatMessage {
+  id: string;
+  groupId: Id;
+  userId: Id;
+  username: string;
+  content: string;
+  createdAt: string;
+}
+
+export interface ActiveUser {
+  userId: Id;
+  username: string;
+  joinedAt?: string;
+}
+
+export interface ChatHistoryResponse {
+  messages: ChatMessage[];
+  totalMessages: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export interface AdminUser {
+  id: Id;
+  username: string;
+  email: string;
+  createdAt: string;
+  role: string;
+  membershipsCount: number;
+  groupsCreatedCount: number;
+  expensesPaidCount: number;
+}
+
+export interface AdminGroup {
+  id: Id;
+  name: string;
+  description?: string | null;
+  category: GroupCategory;
+  createdAt: string;
+  admins: Array<Pick<User, "id" | "username"> | null>;
+  memberCount: number;
+}
+
+export interface AdminOverview {
+  users: AdminUser[];
+  groups: AdminGroup[];
 }

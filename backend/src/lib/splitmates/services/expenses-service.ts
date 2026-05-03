@@ -2,6 +2,7 @@ import type { Id, ExpenseCategory, ExpenseListResponse, ExpenseShare, SplitType 
 import { emitEvent } from "../core/events";
 import { buildEqualShares, normalizeShares, roundMoney } from "../core/math";
 import { prisma } from "@/lib/prisma";
+import { requirePermission } from "./auth/permissions-service";
 
 interface ExpenseInput {
   title: string;
@@ -34,11 +35,16 @@ async function ensureUserInGroup(groupId: Id, userId: Id) {
     throw new Error("Group not found.");
   }
 
-  if (!group.members.find(m => m.userId === userId)) {
-    throw new Error("User is not a member of this group.");
+  if (group.members.find((m) => m.userId === userId)) {
+    return group;
   }
 
-  return group;
+  try {
+    await requirePermission(userId, "View all groups");
+    return group;
+  } catch {
+    throw new Error("User is not a member of this group.");
+  }
 }
 
 async function ensureParticipantsBelongToGroup(groupId: Id, memberIds: Id[]) {
@@ -159,7 +165,11 @@ export async function updateExpense(groupId: Id, expenseId: Id, actorUserId: Id,
 
   const isAdmin = group.members.find(m => m.userId === actorUserId && m.isAdmin);
   if (!isAdmin && expense.paidByUserId !== actorUserId) {
-    throw new Error("Only the group admin or the payer can edit this expense.");
+    try {
+      await requirePermission(actorUserId, "Edit any expense");
+    } catch {
+      throw new Error("Only the group admin or the payer can edit this expense.");
+    }
   }
 
   const memberIds = input.splitType === "equal" 
@@ -216,7 +226,11 @@ export async function deleteExpense(groupId: Id, expenseId: Id, actorUserId: Id)
 
   const isAdmin = group.members.find(m => m.userId === actorUserId && m.isAdmin);
   if (!isAdmin && expense.paidByUserId !== actorUserId) {
-    throw new Error("Only the group admin or the payer can delete this expense.");
+    try {
+      await requirePermission(actorUserId, "Delete any expense");
+    } catch {
+      throw new Error("Only the group admin or the payer can delete this expense.");
+    }
   }
 
   const deleted = await prisma.expense.delete({

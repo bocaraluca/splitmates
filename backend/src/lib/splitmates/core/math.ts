@@ -40,5 +40,3 @@ export function sortExpenses<T extends { amount: number; date: string }>(items: 
     return (new Date(left.date).getTime() - new Date(right.date).getTime()) * direction;
   });
 }
-
-

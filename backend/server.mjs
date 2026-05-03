@@ -1,6 +1,7 @@
 import http from "node:http";
 import next from "next";
 import { WebSocketServer, WebSocket } from "ws";
+import { initializeSocket } from "./src/lib/socket-manager.ts";
 
 const isProduction = process.argv.includes("--production") || process.env.NODE_ENV === "production";
 const isDevelopment = process.argv.includes("--dev") || !isProduction;
@@ -15,6 +16,14 @@ await app.prepare();
 const server = http.createServer((request, response) => {
   void handle(request, response);
 });
+
+try {
+  await initializeSocket(server);
+  console.log("Socket.IO initialized successfully");
+} catch (error) {
+  console.error("Failed to initialize Socket.IO:", error);
+  process.exit(1);
+}
 
 const websocketServer = new WebSocketServer({ noServer: true });
 const sockets = new Set();
@@ -33,7 +42,6 @@ globalThis.__splitmatesBroadcastWebSocket = (payload) => {
 server.on("upgrade", (request, socket, head) => {
   const url = new URL(request.url ?? "/", `http://${request.headers.host ?? `${hostname}:${port}`}`);
   if (url.pathname !== "/ws") {
-    socket.destroy();
     return;
   }
 
@@ -51,4 +59,5 @@ websocketServer.on("connection", (websocket) => {
 
 server.listen(port, hostname, () => {
   console.log(`SplitMates backend ready at http://${hostname}:${port} (${isDevelopment ? "dev" : "prod"})`);
+  console.log(`WebSocket ready for real-time chat on port ${port}`);
 });

@@ -56,7 +56,7 @@ export function AuthPage({ mode }: { mode: "login" | "signup" }) {
         body: JSON.stringify(payload),
       });
 
-      login(response.user.username, response.token);
+      login(response.user.username, response.token, response.role, response.permissions);
       router.push("/dashboard");
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Authentication failed.");

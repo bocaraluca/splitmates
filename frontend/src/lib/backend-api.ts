@@ -49,6 +49,27 @@ export function backendWebSocketUrl(path = "/ws") {
   return new URL(path, baseUrl).toString();
 }
 
+export function backendSocketUrl() {
+  const baseUrl = process.env.NEXT_PUBLIC_BACKEND_WS_URL ?? "ws://localhost:4000";
+  const url = new URL(baseUrl);
+
+  if (url.protocol === "ws:") {
+    url.protocol = "http:";
+  } else if (url.protocol === "wss:") {
+    url.protocol = "https:";
+  }
+
+  url.pathname = "";
+  url.search = "";
+  url.hash = "";
+
+  return url.toString().replace(/\/$/, "");
+}
+
+export function getCurrentClientUserId() {
+  return readCurrentClientUserId();
+}
+
 async function parseResponse(response: Response) {
   const text = await response.text();
   if (!text) {

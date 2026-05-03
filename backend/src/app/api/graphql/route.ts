@@ -148,6 +148,8 @@ const schema = buildSchema(`
   type AuthSession {
     token: String!
     user: User!
+    role: String!
+    permissions: [String!]!
   }
 
   type GroupPayload {
@@ -493,11 +495,18 @@ export async function POST(request: Request) {
       rootValue: rootValue(request),
     });
 
-    const status = result.errors?.length ? 400 : 200;
+    const status = result.errors?.length
+      ? result.errors.some((error) => (error.originalError as { status?: number } | undefined)?.status === 403)
+        ? 403
+        : 400
+      : 200;
     return Response.json(result, { status });
   } catch (error) {
     const message = error instanceof Error ? error.message : "GraphQL request failed.";
-    return Response.json({ errors: [{ message }] }, { status: 400 });
+    const status = typeof error === "object" && error && "status" in error && typeof (error as { status?: unknown }).status === "number"
+      ? (error as { status: number }).status
+      : 400;
+    return Response.json({ errors: [{ message }] }, { status });
   }
 }
 

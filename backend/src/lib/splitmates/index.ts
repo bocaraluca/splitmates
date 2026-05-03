@@ -7,6 +7,7 @@ export * from "./services/auth/login-service";
 export * from "./services/auth/signup-service";
 export * from "./services/groups-service";
 export * from "./services/expenses-service";
+export * from "./services/admin-service";
 export * from "./services/statistics-service";
 export * from "./services/generator/status-service";
 export * from "./services/generator/generator-service";

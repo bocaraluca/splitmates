@@ -115,6 +115,11 @@ describe("auth and misc routes", () => {
     getDashboardSummary.mockRejectedValueOnce(new Error("boom"));
     const err = await mod.GET(new Request("http://localhost/api/dashboard"));
     expect(err.status).toBe(400);
+
+    getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
+    getDashboardSummary.mockRejectedValueOnce("boom");
+    const nonError = await mod.GET(new Request("http://localhost/api/dashboard"));
+    expect(nonError.status).toBe(400);
   });
 
   it("generator/health routes handle success and error branches", async () => {

@@ -54,5 +54,7 @@ export async function signupUser(input: SignupInput): Promise<LoginResponse> {
       email: user.email,
       createdAt: user.createdAt.toISOString(),
     },
+    role: userRole.title,
+    permissions: [],
   };
 }

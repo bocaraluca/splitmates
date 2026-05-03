@@ -8,6 +8,7 @@ import {
   getCurrentUserFromRequest,
   updateGroup,
 } from "@/lib/splitmates";
+import { requirePermission } from "@/lib/splitmates/services/auth/permissions-service";
 
 export const runtime = "nodejs";
 
@@ -28,7 +29,11 @@ export async function GET(request: Request, context: { params: Promise<{ groupId
   }
 
   if (!group.memberIds.includes(currentUser.id)) {
-    return jsonError("You are not a member of this group.", 403);
+    try {
+      await requirePermission(currentUser.id, "View all groups");
+    } catch {
+      return jsonError("You are not a member of this group.", 403);
+    }
   }
 
   return jsonOk({
@@ -60,7 +65,10 @@ export async function PATCH(request: Request, context: { params: Promise<{ group
     return jsonOk({ group });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to update group.";
-    return jsonError(message, 400);
+    const status = typeof error === "object" && error && "status" in error && typeof (error as { status?: unknown }).status === "number"
+      ? (error as { status: number }).status
+      : 400;
+    return jsonError(message, status);
   }
 }
 
@@ -84,7 +92,10 @@ export async function DELETE(request: Request, context: { params: Promise<{ grou
     return jsonOk({ group: deleted });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to delete group.";
-    return jsonError(message, 400);
+    const status = typeof error === "object" && error && "status" in error && typeof (error as { status?: unknown }).status === "number"
+      ? (error as { status: number }).status
+      : 400;
+    return jsonError(message, status);
   }
 }
 

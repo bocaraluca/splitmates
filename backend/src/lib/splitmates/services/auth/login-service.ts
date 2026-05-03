@@ -18,6 +18,17 @@ export async function loginUser(input: LoginInput): Promise<LoginResponse> {
         { email: identifier },
       ],
     },
+    include: {
+      role: {
+        include: {
+          rolePermissions: {
+            include: {
+              permission: true,
+            },
+          },
+        },
+      },
+    },
   });
 
   if (!user || !bcrypt.compareSync(input.password, user.passwordHash)) {
@@ -34,5 +45,7 @@ export async function loginUser(input: LoginInput): Promise<LoginResponse> {
       email: user.email,
       createdAt: user.createdAt.toISOString(),
     },
+    role: user.role.title,
+    permissions: user.role.rolePermissions.map((rolePermission) => rolePermission.permission.title),
   };
 }

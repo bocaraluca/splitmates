@@ -9,15 +9,19 @@ describe("groups routes", () => {
   it("/groups GET and POST cover auth and success", async () => {
     const getCurrentUserFromRequest = vi.fn();
     const getGroupsForUserId = vi.fn();
+    const getGroups = vi.fn();
     const createGroup = vi.fn();
     const mapGroupForResponse = vi.fn();
+    const getUserPermissions = vi.fn();
 
     vi.doMock("@/lib/splitmates", () => ({
       getCurrentUserFromRequest,
       getGroupsForUserId,
+      getGroups,
       createGroup,
     }));
     vi.doMock("@/lib/splitmates/api/group-response", () => ({ mapGroupForResponse }));
+    vi.doMock("@/lib/splitmates/services/auth/permissions-service", () => ({ getUserPermissions }));
 
     const mod = await import("@/app/api/groups/route");
 
@@ -26,10 +30,19 @@ describe("groups routes", () => {
     expect(unauthorized.status).toBe(401);
 
     getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
+    getUserPermissions.mockResolvedValueOnce({ role: "user", permissions: [] });
     getGroupsForUserId.mockResolvedValueOnce([{ id: 10 }]);
     mapGroupForResponse.mockResolvedValueOnce({ id: 10, name: "A" });
     const okGet = await mod.GET(new Request("http://localhost/api/groups"));
     expect(okGet.status).toBe(200);
+
+    getCurrentUserFromRequest.mockResolvedValueOnce({ id: 2 });
+    getUserPermissions.mockResolvedValueOnce({ role: "admin", permissions: ["View all groups"] });
+    getGroups.mockResolvedValueOnce([{ id: 10 }, { id: 11 }]);
+    mapGroupForResponse.mockResolvedValueOnce({ id: 10, name: "A" });
+    mapGroupForResponse.mockResolvedValueOnce({ id: 11, name: "B" });
+    const okGetAdmin = await mod.GET(new Request("http://localhost/api/groups"));
+    expect(okGetAdmin.status).toBe(200);
 
     getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
     createGroup.mockResolvedValueOnce({ id: 11, name: "New" });
@@ -40,6 +53,15 @@ describe("groups routes", () => {
       body: JSON.stringify({ name: "New Group", category: "household" }),
     }));
     expect(okPost.status).toBe(201);
+
+    getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
+    createGroup.mockRejectedValueOnce("boom");
+    const nonErrorCreate = await mod.POST(new Request("http://localhost/api/groups", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Valid Group", category: "household" }),
+    }));
+    expect(nonErrorCreate.status).toBe(400);
   });
 
   it("/groups/[groupId] GET PATCH DELETE cover status branches", async () => {
@@ -243,6 +265,10 @@ describe("groups routes", () => {
     const unauthAdd = await membersMod.POST(new Request("http://localhost", { method: "POST" }), { params: Promise.resolve({ groupId: "1" }) });
     expect(unauthAdd.status).toBe(401);
 
+    deps.getCurrentUserFromRequest.mockResolvedValueOnce(null);
+    const unauthRemove = await membersMod.DELETE(new Request("http://localhost", { method: "DELETE" }), { params: Promise.resolve({ groupId: "1" }) });
+    expect(unauthRemove.status).toBe(401);
+
     deps.getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
     deps.addMemberToGroup.mockResolvedValueOnce({ id: 1 });
     deps.getUserRecordByIdentifier.mockResolvedValueOnce({ id: 2 });
@@ -256,6 +282,17 @@ describe("groups routes", () => {
     expect(okAdd.status).toBe(200);
 
     deps.getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
+    deps.addMemberToGroup.mockResolvedValueOnce({ id: 1 });
+    deps.getUserRecordByIdentifier.mockResolvedValueOnce(null);
+    mapGroupForResponse.mockResolvedValueOnce({ id: 1 });
+    const okAddWithoutUserRecord = await membersMod.POST(new Request("http://localhost", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ identifier: "ghost" }),
+    }), { params: Promise.resolve({ groupId: "1" }) });
+    expect(okAddWithoutUserRecord.status).toBe(200);
+
+    deps.getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
     deps.getUserById.mockResolvedValueOnce(null);
     const del404 = await membersMod.DELETE(new Request("http://localhost", {
       method: "DELETE",
@@ -263,6 +300,14 @@ describe("groups routes", () => {
       body: JSON.stringify({ userId: 44 }),
     }), { params: Promise.resolve({ groupId: "1" }) });
     expect(del404.status).toBe(404);
+
+    deps.getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
+    const del404NoTarget = await membersMod.DELETE(new Request("http://localhost", {
+      method: "DELETE",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({}),
+    }), { params: Promise.resolve({ groupId: "1" }) });
+    expect(del404NoTarget.status).toBe(404);
 
     deps.getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
     deps.getUserById.mockResolvedValueOnce({ id: 2, username: "ana" });
@@ -274,6 +319,16 @@ describe("groups routes", () => {
       body: JSON.stringify({ userId: 2 }),
     }), { params: Promise.resolve({ groupId: "1" }) });
     expect(del200.status).toBe(200);
+
+    deps.getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
+    deps.getUserById.mockResolvedValueOnce({ id: 3, username: "ion" });
+    deps.removeMemberFromGroup.mockResolvedValueOnce(null);
+    const del200NullGroup = await membersMod.DELETE(new Request("http://localhost", {
+      method: "DELETE",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ userId: 3 }),
+    }), { params: Promise.resolve({ groupId: "1" }) });
+    expect(del200NullGroup.status).toBe(200);
 
     const payInvalid = await paymentsMod.GET(new Request("http://localhost"), { params: Promise.resolve({ groupId: "x" }) });
     expect(payInvalid.status).toBe(400);
@@ -368,6 +423,9 @@ describe("groups routes", () => {
     deps.getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
     deps.deleteGroup.mockRejectedValueOnce(new Error("err"));
     expect((await groupMod.DELETE(new Request("http://localhost"), { params: Promise.resolve({ groupId: "1" }) })).status).toBe(400);
+    deps.getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
+    deps.deleteGroup.mockRejectedValueOnce({ status: 409 });
+    expect((await groupMod.DELETE(new Request("http://localhost"), { params: Promise.resolve({ groupId: "1" }) })).status).toBe(409);
 
     deps.getGroupById.mockResolvedValueOnce({ id: 1 });
     expect((await expListMod.GET(new Request("http://localhost?page=invalid"), { params: Promise.resolve({ groupId: "1" }) })).status).toBe(400);
@@ -384,12 +442,22 @@ describe("groups routes", () => {
     expect((await expDetMod.PATCH(new Request("http://localhost"), { params: Promise.resolve({ groupId: "x", expenseId: "1" }) })).status).toBe(400);
     deps.getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
     expect((await expDetMod.PATCH(new Request("http://localhost", { method: "PATCH", body: "{" }), { params: Promise.resolve({ groupId: "1", expenseId: "1" }) })).status).toBe(400);
+    deps.getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
+    deps.updateExpense.mockRejectedValueOnce({ status: 422 });
+    expect((await expDetMod.PATCH(new Request("http://localhost", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ title: "Rent", amount: 10, currency: "RON", category: "rent", date: new Date().toISOString(), paidByUserId: 1, splitType: "equal", memberIds: [1], shares: [] }),
+    }), { params: Promise.resolve({ groupId: "1", expenseId: "1" }) })).status).toBe(422);
 
     deps.getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
     expect((await expDetMod.DELETE(new Request("http://localhost"), { params: Promise.resolve({ groupId: "x", expenseId: "1" }) })).status).toBe(400);
     deps.getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
     deps.deleteExpense.mockRejectedValueOnce(new Error("err"));
     expect((await expDetMod.DELETE(new Request("http://localhost"), { params: Promise.resolve({ groupId: "1", expenseId: "1" }) })).status).toBe(400);
+    deps.getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
+    deps.deleteExpense.mockRejectedValueOnce({ status: 409 });
+    expect((await expDetMod.DELETE(new Request("http://localhost"), { params: Promise.resolve({ groupId: "1", expenseId: "1" }) })).status).toBe(409);
 
     deps.getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
     expect((await leaveMod.POST(new Request("http://localhost"), { params: Promise.resolve({ groupId: "x" }) })).status).toBe(400);
@@ -512,5 +580,85 @@ describe("groups routes", () => {
       body: JSON.stringify({ fromUserId: 1, toUserId: 2, amount: 10 })
     }), { params: Promise.resolve({ groupId: "1" }) });
     expect(res10.status).toBe(400);
+  });
+
+  it("covers remaining groups and members error branches", async () => {
+    const deps = {
+      getCurrentUserFromRequest: vi.fn(),
+      getGroupById: vi.fn(),
+      createGroup: vi.fn(),
+      updateGroup: vi.fn(),
+      deleteGroup: vi.fn(),
+      getExpenses: vi.fn(),
+      createExpense: vi.fn(),
+      updateExpense: vi.fn(),
+      deleteExpense: vi.fn(),
+      leaveGroup: vi.fn(),
+      addMemberToGroup: vi.fn(),
+      createPayment: vi.fn(),
+      getUserPermissions: vi.fn(),
+      getGroupsForUserId: vi.fn(),
+      getGroups: vi.fn(),
+      getDashboardSummary: vi.fn(),
+      getUserRecordByIdentifier: vi.fn(),
+      getUserById: vi.fn(),
+      removeMemberFromGroup: vi.fn(),
+    };
+    const mapGroupForResponse = vi.fn();
+
+    vi.doMock("@/lib/splitmates", () => deps);
+    vi.doMock("@/lib/splitmates/api/group-response", () => ({ mapGroupForResponse }));
+    vi.doMock("@/lib/splitmates/services/auth/permissions-service", () => ({ getUserPermissions: deps.getUserPermissions }));
+
+    const groupsMod = await import("@/app/api/groups/route");
+    const groupMod = await import("@/app/api/groups/[groupId]/route");
+    const membersMod = await import("@/app/api/groups/[groupId]/members/route");
+
+    deps.getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
+    deps.createGroup.mockRejectedValueOnce("Non-Error String");
+    const badCreate = await groupsMod.POST(new Request("http://localhost/api/groups", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "A", category: "household" }),
+    }));
+    expect(badCreate.status).toBe(400);
+
+    deps.getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
+    deps.updateGroup.mockRejectedValueOnce("Non-Error String");
+    const badPatch = await groupMod.PATCH(new Request("http://localhost", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "AB" }),
+    }), { params: Promise.resolve({ groupId: "1" }) });
+    expect(badPatch.status).toBe(400);
+
+    deps.getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
+    deps.updateGroup.mockRejectedValueOnce({ status: 409 });
+    const badPatchStatus = await groupMod.PATCH(new Request("http://localhost", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "AB" }),
+    }), { params: Promise.resolve({ groupId: "1" }) });
+    expect(badPatchStatus.status).toBe(409);
+
+    deps.getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
+    deps.deleteGroup.mockRejectedValueOnce("Non-Error String");
+    const badDelete = await groupMod.DELETE(new Request("http://localhost", { method: "DELETE" }), { params: Promise.resolve({ groupId: "1" }) });
+    expect(badDelete.status).toBe(400);
+
+    deps.getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
+    deps.deleteGroup.mockRejectedValueOnce({ status: 403 });
+    const badDeleteStatus = await groupMod.DELETE(new Request("http://localhost", { method: "DELETE" }), { params: Promise.resolve({ groupId: "1" }) });
+    expect(badDeleteStatus.status).toBe(403);
+
+    deps.getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
+    const invalidMemberRemove = await membersMod.DELETE(new Request("http://localhost", { method: "DELETE", headers: { "content-type": "application/json" }, body: JSON.stringify({}) }), { params: Promise.resolve({ groupId: "0" }) });
+    expect(invalidMemberRemove.status).toBe(400);
+
+    deps.getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
+    deps.removeMemberFromGroup.mockRejectedValueOnce("Non-Error String");
+    deps.getUserById.mockResolvedValueOnce({ id: 99, username: "test" });
+    const badMemberRemove = await membersMod.DELETE(new Request("http://localhost", { method: "DELETE", headers: { "content-type": "application/json" }, body: JSON.stringify({ userId: 99 }) }), { params: Promise.resolve({ groupId: "1" }) });
+    expect(badMemberRemove.status).toBe(400);
   });
 });

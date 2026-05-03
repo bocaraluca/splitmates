@@ -121,8 +121,18 @@ describe("GraphQL Route", () => {
 
   it("POST executes success mutations", async () => {
     deps.getCurrentUserFromRequest.mockResolvedValue({ id: 1 });
-    deps.signupUser.mockResolvedValue({ token: "token123", user: { id: 1, username: "user1", email: "user1@test.com" } });
-    deps.loginUser.mockResolvedValue({ token: "token123", user: { id: 1, username: "user1", email: "user1@test.com" } });
+    deps.signupUser.mockResolvedValue({
+      token: "token123",
+      user: { id: 1, username: "user1", email: "user1@test.com", createdAt: "2024-01-01T00:00:00.000Z" },
+      role: "user",
+      permissions: [],
+    });
+    deps.loginUser.mockResolvedValue({
+      token: "token123",
+      user: { id: 1, username: "user1", email: "user1@test.com", createdAt: "2024-01-01T00:00:00.000Z" },
+      role: "admin",
+      permissions: ["groups.deleteAny", "users.viewAll"],
+    });
     deps.createGroup.mockResolvedValue({ id: 1 });
     deps.updateGroup.mockImplementation(async (id) => (id === 999 ? null : { id }));
     deps.deleteGroup.mockImplementation(async (id) => (id === 999 ? null : { id }));
@@ -141,7 +151,7 @@ describe("GraphQL Route", () => {
     const m = `
     mutation {
       signup(username:"user123", email:"user123@test.com", password:"secret123", confirmPassword:"secret123") { token }
-      login(identifier:"user123", password:"secret123") { token }
+      login(identifier:"user123", password:"secret123") { token role permissions }
       createGroup(input: {name:"Test Group", category:"other"}) { group { id } }
       updateGroup(groupId: 1, input: {name:"Updated Group"}) { group { id } }
       deleteGroup(groupId: 1) { group { id } }

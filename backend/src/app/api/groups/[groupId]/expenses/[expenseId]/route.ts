@@ -56,7 +56,10 @@ export async function PATCH(request: Request, context: { params: Promise<{ group
     return jsonOk({ expense });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to update expense.";
-    return jsonError(message, 400);
+    const status = typeof error === "object" && error && "status" in error && typeof (error as { status?: unknown }).status === "number"
+      ? (error as { status: number }).status
+      : 400;
+    return jsonError(message, status);
   }
 }
 
@@ -83,7 +86,10 @@ export async function DELETE(request: Request, context: { params: Promise<{ grou
     return jsonOk({ expense });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to delete expense.";
-    return jsonError(message, 400);
+    const status = typeof error === "object" && error && "status" in error && typeof (error as { status?: unknown }).status === "number"
+      ? (error as { status: number }).status
+      : 400;
+    return jsonError(message, status);
   }
 }
 

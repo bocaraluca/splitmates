@@ -7,16 +7,22 @@ import { useRouter } from "next/navigation";
 import MenuIcon from "@mui/icons-material/MenuRounded";
 import { AppBar, Box, Button, Container, IconButton, Menu, MenuItem, Stack, Toolbar, Typography } from "@mui/material";
 import { fetchFromBackend } from "@/lib/backend-api";
-import { DEFAULT_USERNAME, getToken, getUsername, logout } from "@/lib/auth-storage";
+import { DEFAULT_USERNAME, getRole, getToken, getUsername, logout } from "@/lib/auth-storage";
 
 export function AppNavbar() {
   const router = useRouter();
   const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(null);
   const [mobileMenuAnchor, setMobileMenuAnchor] = useState<null | HTMLElement>(null);
   const [username, setUsername] = useState(DEFAULT_USERNAME);
+  const [role, setRole] = useState<string | null>(null);
 
   useEffect(() => {
-    setUsername(getUsername());
+    const timeoutId = window.setTimeout(() => {
+      setUsername(getUsername());
+      setRole(getRole());
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, []);
 
   const userMenuOpen = Boolean(userMenuAnchor);
@@ -48,6 +54,7 @@ export function AppNavbar() {
 
     logout();
     setUsername(DEFAULT_USERNAME);
+    setRole(null);
     setUserMenuAnchor(null);
     setMobileMenuAnchor(null);
     router.push("/");
@@ -138,25 +145,30 @@ export function AppNavbar() {
             </Button>
           </Stack>
 
-          <Box
-            onClick={handleOpenUserMenu}
-            sx={{
-              ml: "auto",
-              width: 46,
-              height: 46,
-              borderRadius: 999,
-              display: "grid",
-              placeItems: "center",
-              background: "#e9efff",
-              color: "#7448b0",
-              fontSize: 30,
-              fontWeight: 800,
-              zIndex: 2,
-              cursor: "pointer",
-            }}
-          >
-            {avatarInitial}
-          </Box>
+          <Stack direction="row" spacing={1.2} sx={{ ml: "auto", alignItems: "center", zIndex: 2 }}>
+            {role === "admin" ? (
+              <Button component={Link} href="/admin" variant="outlined" sx={{ color: "white", borderColor: "rgba(255,255,255,0.5)", fontWeight: 800 }}>
+                Admin
+              </Button>
+            ) : null}
+            <Box
+              onClick={handleOpenUserMenu}
+              sx={{
+                width: 46,
+                height: 46,
+                borderRadius: 999,
+                display: "grid",
+                placeItems: "center",
+                background: "#e9efff",
+                color: "#7448b0",
+                fontSize: 30,
+                fontWeight: 800,
+                cursor: "pointer",
+              }}
+            >
+              {avatarInitial}
+            </Box>
+          </Stack>
           <Menu anchorEl={mobileMenuAnchor} open={mobileMenuOpen} onClose={handleCloseMobileMenu}>
             <MenuItem component={Link} href="/dashboard" onClick={handleCloseMobileMenu}>
               Dashboard
@@ -164,6 +176,11 @@ export function AppNavbar() {
             <MenuItem component={Link} href="/groups" onClick={handleCloseMobileMenu}>
               Groups
             </MenuItem>
+            {role === "admin" ? (
+              <MenuItem component={Link} href="/admin" onClick={handleCloseMobileMenu}>
+                Admin
+              </MenuItem>
+            ) : null}
           </Menu>
           <Menu anchorEl={userMenuAnchor} open={userMenuOpen} onClose={handleCloseUserMenu}>
             <Box sx={{ px: 2, py: 1.2 }}>

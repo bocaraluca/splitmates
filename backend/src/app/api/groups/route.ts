@@ -1,7 +1,8 @@
 import { createGroupSchema } from "@/lib/splitmates/validation/schemas";
 import { jsonError, jsonOk } from "@/lib/splitmates/api/http";
 import { mapGroupForResponse } from "@/lib/splitmates/api/group-response";
-import { createGroup, getGroupsForUserId, getCurrentUserFromRequest } from "@/lib/splitmates";
+import { createGroup, getGroupsForUserId, getGroups, getCurrentUserFromRequest } from "@/lib/splitmates";
+import { getUserPermissions } from "@/lib/splitmates/services/auth/permissions-service";
 
 export const runtime = "nodejs";
 
@@ -11,7 +12,14 @@ export async function GET(request: Request) {
     return jsonError("You must be logged in to view groups.", 401);
   }
 
-  const groupsRaw = await getGroupsForUserId(currentUser.id);
+  let groupsRaw: any[];
+  const userPermissions = await getUserPermissions(currentUser.id);
+  if (userPermissions.role === "admin") {
+    groupsRaw = await getGroups();
+  } else {
+    groupsRaw = await getGroupsForUserId(currentUser.id);
+  }
+
   const groups = await Promise.all(
     groupsRaw.map((group: any) => mapGroupForResponse(group, currentUser.id)),
   );

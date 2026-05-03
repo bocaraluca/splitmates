@@ -6,7 +6,7 @@ import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import { Box, Button, Card, CardContent, Chip, Container, Stack, TextField, Typography } from "@mui/material";
 import { AppNavbar } from "@/components/navigation/app-navbar";
 import { fetchFromBackend } from "@/lib/backend-api";
-import { getToken } from "@/lib/auth-storage";
+import { getToken, getRole } from "@/lib/auth-storage";
 import type { GroupSummary } from "@/lib/types";
 
 function CreateGroupButton({ display, sizeXs, sizeMd, alignSelf }: {
@@ -54,17 +54,71 @@ function CreateGroupButton({ display, sizeXs, sizeMd, alignSelf }: {
   );
 }
 
+function GroupCard({ group }: { group: GroupSummary }) {
+  return (
+    <Card
+      sx={{
+        minHeight: 260,
+        borderRadius: { xs: 2, md: 0 },
+        background: "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(252,246,255,0.9))",
+        border: "1px solid rgba(148, 71, 198, 0.16)",
+        boxShadow: "0 10px 24px rgba(121, 72, 180, 0.1)",
+        position: "relative",
+        width: "100%",
+        minWidth: 0,
+        boxSizing: "border-box",
+        "&::before": {
+          content: '""',
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width: "100%",
+          height: 4,
+          background: "linear-gradient(90deg, #e83ea8, #6f29c6, #56c9ef)",
+        },
+      }}
+    >
+      <CardContent sx={{ p: { xs: 1.75, md: 3 }, height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between", minWidth: 0 }}>
+        <Box>
+          <Stack direction="row" spacing={1} sx={{ mb: 1.5, flexWrap: "wrap" }}>
+            <Chip label={group.category} color="primary" variant="outlined" />
+            <Chip label={`${group.members.filter(Boolean).length} members`} />
+          </Stack>
+          <Typography variant="h4" sx={{ fontWeight: 800, lineHeight: 1.1, fontSize: { xs: 26, md: 34 }, overflowWrap: "anywhere" }}>
+            {group.name}
+          </Typography>
+          {group.description ? (
+            <Typography variant="body2" sx={{ mt: 1.5, color: "text.secondary", lineHeight: 1.8, overflowWrap: "anywhere" }}>
+              {group.description}
+            </Typography>
+          ) : null}
+          <Stack direction="row" spacing={0.8} sx={{ mt: 2, flexWrap: "wrap" }}>
+            {group.members.filter(Boolean).map((member) => (
+              <Chip key={member?.id ?? member?.username} label={member?.username ?? "unknown"} size="small" />
+            ))}
+          </Stack>
+        </Box>
+        <Button component={Link} href={`/groups/${group.id}`} variant="text" sx={{ justifyContent: "flex-start", px: 0, fontWeight: 800 }}>
+          View group →
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function GroupsPage() {
   const [groups, setGroups] = useState<GroupSummary[]>([]);
   const [query, setQuery] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [token] = useState<string | null>(getToken);
+  const [role] = useState<string | null>(getRole());
+  const isAdmin = role === "admin";
 
   const loadGroups = useCallback(() => {
     const auth = token ? { token } : {};
     void fetchFromBackend<{ groups: GroupSummary[] }>("/groups", auth)
       .then((response) => {
-        setGroups(response.groups.filter((group) => group.isMember));
+        setGroups(response.groups);
         setErrorMessage(null);
       })
       .catch((error) => {
@@ -88,10 +142,21 @@ export function GroupsPage() {
 
   const filteredGroups = useMemo(() => {
     const searchText = query.trim().toLowerCase();
-    return searchText
-      ? groups.filter((group) => [group.name, group.category, ...group.members.map((member) => member?.username ?? "")].join(" ").toLowerCase().includes(searchText))
-      : groups;
+    if (!searchText) {
+      return groups;
+    }
+    return groups.filter((group) => [group.name, group.category, ...group.members.map((member) => member?.username ?? "")].join(" ").toLowerCase().includes(searchText));
   }, [groups, query]);
+
+  const yourGroups = useMemo(() => {
+    return filteredGroups.filter((group) => group.isMember);
+  }, [filteredGroups]);
+
+  const allOtherGroups = useMemo(() => {
+    return filteredGroups.filter((group) => !group.isMember);
+  }, [filteredGroups]);
+
+  const shouldShowSections = isAdmin && allOtherGroups.length > 0;
 
   return (
     <Box sx={{ minHeight: "100vh", background: "linear-gradient(108deg, rgba(248,233,255,0.95) 0%, rgba(239,227,255,0.94) 50%, rgba(227,246,255,0.94) 100%)", overflowX: "clip" }}>
@@ -121,58 +186,43 @@ export function GroupsPage() {
 
           {errorMessage ? <Typography sx={{ color: "#c43e57", fontWeight: 700 }}>{errorMessage}</Typography> : null}
 
-          <Box sx={{ display: "grid", gap: { xs: 1.5, md: 2 }, gridTemplateColumns: { xs: "minmax(0, 1fr)", md: "repeat(2, minmax(0, 1fr))", xl: "repeat(3, minmax(0, 1fr))" }, width: "100%", justifyItems: "stretch" }}>
-            {filteredGroups.map((group) => (
-              <Card
-                key={group.id}
-                sx={{
-                  minHeight: 260,
-                  borderRadius: { xs: 2, md: 0 },
-                  background: "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(252,246,255,0.9))",
-                  border: "1px solid rgba(148, 71, 198, 0.16)",
-                  boxShadow: "0 10px 24px rgba(121, 72, 180, 0.1)",
-                  position: "relative",
-                  width: "100%",
-                  minWidth: 0,
-                  boxSizing: "border-box",
-                  "&::before": {
-                    content: '""',
-                    position: "absolute",
-                    left: 0,
-                    top: 0,
-                    width: "100%",
-                    height: 4,
-                    background: "linear-gradient(90deg, #e83ea8, #6f29c6, #56c9ef)",
-                  },
-                }}
-              >
-                <CardContent sx={{ p: { xs: 1.75, md: 3 }, height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between", minWidth: 0 }}>
-                  <Box>
-                    <Stack direction="row" spacing={1} sx={{ mb: 1.5, flexWrap: "wrap" }}>
-                      <Chip label={group.category} color="primary" variant="outlined" />
-                      <Chip label={`${group.members.filter(Boolean).length} members`} />
-                    </Stack>
-                    <Typography variant="h4" sx={{ fontWeight: 800, lineHeight: 1.1, fontSize: { xs: 26, md: 34 }, overflowWrap: "anywhere" }}>
-                      {group.name}
-                    </Typography>
-                    {group.description ? (
-                      <Typography variant="body2" sx={{ mt: 1.5, color: "text.secondary", lineHeight: 1.8, overflowWrap: "anywhere" }}>
-                        {group.description}
-                      </Typography>
-                    ) : null}
-                    <Stack direction="row" spacing={0.8} sx={{ mt: 2, flexWrap: "wrap" }}>
-                      {group.members.filter(Boolean).map((member) => (
-                        <Chip key={member?.id ?? member?.username} label={member?.username ?? "unknown"} size="small" />
-                      ))}
-                    </Stack>
+          {shouldShowSections ? (
+            <Stack spacing={4}>
+              {/* Your Groups Section */}
+              <Box>
+                <Typography variant="h3" sx={{ fontSize: { xs: 24, md: 32 }, fontWeight: 800, mb: 3 }}>
+                  Your groups
+                </Typography>
+                <Box sx={{ display: "grid", gap: { xs: 1.5, md: 2 }, gridTemplateColumns: { xs: "minmax(0, 1fr)", md: "repeat(2, minmax(0, 1fr))", xl: "repeat(3, minmax(0, 1fr))" }, width: "100%", justifyItems: "stretch" }}>
+                  {yourGroups.length > 0 ? (
+                    yourGroups.map((group) => <GroupCard key={group.id} group={group} />)
+                  ) : (
+                    <Typography sx={{ color: "text.secondary", gridColumn: "1 / -1" }}>No groups yet</Typography>
+                  )}
+                </Box>
+              </Box>
+
+              {/* All Other Groups Section */}
+              {allOtherGroups.length > 0 && (
+                <Box>
+                  <Typography variant="h3" sx={{ fontSize: { xs: 24, md: 32 }, fontWeight: 800, mb: 3 }}>
+                    All groups
+                  </Typography>
+                  <Box sx={{ display: "grid", gap: { xs: 1.5, md: 2 }, gridTemplateColumns: { xs: "minmax(0, 1fr)", md: "repeat(2, minmax(0, 1fr))", xl: "repeat(3, minmax(0, 1fr))" }, width: "100%", justifyItems: "stretch" }}>
+                    {allOtherGroups.map((group) => <GroupCard key={group.id} group={group} />)}
                   </Box>
-                  <Button component={Link} href={`/groups/${group.id}`} variant="text" sx={{ justifyContent: "flex-start", px: 0, fontWeight: 800 }}>
-                    View group →
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </Box>
+                </Box>
+              )}
+            </Stack>
+          ) : (
+            <Box sx={{ display: "grid", gap: { xs: 1.5, md: 2 }, gridTemplateColumns: { xs: "minmax(0, 1fr)", md: "repeat(2, minmax(0, 1fr))", xl: "repeat(3, minmax(0, 1fr))" }, width: "100%", justifyItems: "stretch" }}>
+              {filteredGroups.length > 0 ? (
+                filteredGroups.map((group) => <GroupCard key={group.id} group={group} />)
+              ) : (
+                <Typography sx={{ color: "text.secondary" }}>No groups found</Typography>
+              )}
+            </Box>
+          )}
         </Stack>
       </Container>
     </Box>

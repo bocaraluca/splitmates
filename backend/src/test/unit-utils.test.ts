@@ -103,6 +103,7 @@ describe("utility coverage", () => {
 
   it("covers math helpers", () => {
     expect(roundMoney(10.005)).toBe(10.01);
+    expect(buildEqualShares(50, [])).toEqual([]);
     expect(buildEqualShares(100, [1, 2, 3]).reduce((sum, s) => sum + s.amount, 0)).toBeCloseTo(100, 2);
     expect(normalizeShares([{ userId: 1, amount: 5 }, { userId: 1, amount: 7 }])[0].amount).toBe(12);
 
@@ -241,6 +242,18 @@ describe("utility coverage", () => {
     expect(health.groups).toBe(2);
     expect(health.generator.running).toBe(true);
     expect(health.generator.generatedCount).toBe(3);
+  });
+
+  it("covers state reset timer cleanup branch", () => {
+    const state = getState();
+    const interval = setInterval(() => undefined, 1000);
+    const clearIntervalSpy = vi.spyOn(globalThis, "clearInterval");
+
+    state.generator.timer = interval;
+    resetSplitmatesStateForTests();
+
+    expect(clearIntervalSpy).toHaveBeenCalled();
+    clearIntervalSpy.mockRestore();
   });
 });
 

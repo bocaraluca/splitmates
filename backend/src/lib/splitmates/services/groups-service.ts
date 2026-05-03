@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import type { GroupCategory } from "../model/types";
 import { emitEvent } from "../core/events";
+import { requirePermission } from "./auth/permissions-service";
 
 interface GroupInput {
   name: string;
@@ -63,7 +64,11 @@ export async function updateGroup(groupId: number, input: Partial<GroupInput>, u
 
   const isAdmin = group.members.some((m) => m.userId === userId && m.isAdmin);
   if (!isAdmin) {
-    throw new Error("Only a group admin can perform this action.");
+    try {
+      await requirePermission(userId, "Edit any group");
+    } catch {
+      throw new Error("Only a group admin can perform this action.");
+    }
   }
 
   const updated = await prisma.group.update({
@@ -93,7 +98,11 @@ export async function deleteGroup(groupId: number, userId: number): Promise<any 
 
   const isAdmin = group.members.some((m) => m.userId === userId && m.isAdmin);
   if (!isAdmin) {
-    throw new Error("Only a group admin can perform this action.");
+    try {
+      await requirePermission(userId, "Delete any group");
+    } catch {
+      throw new Error("Only a group admin can perform this action.");
+    }
   }
 
   await prisma.group.delete({ where: { id: groupId } });
@@ -115,7 +124,11 @@ export async function addMemberToGroup(groupId: number, identifier: string, user
 
   const isAdmin = group.members.some((m) => m.userId === userId && m.isAdmin);
   if (!isAdmin) {
-    throw new Error("Only a group admin can perform this action.");
+    try {
+      await requirePermission(userId, "Edit any group");
+    } catch {
+      throw new Error("Only a group admin can perform this action.");
+    }
   }
 
   const newUser = await prisma.user.findFirst({
@@ -166,7 +179,11 @@ export async function removeMemberFromGroup(groupId: number, memberUserId: numbe
 
   const isAdmin = group.members.some((m) => m.userId === userId && m.isAdmin);
   if (!isAdmin) {
-    throw new Error("Only a group admin can perform this action.");
+    try {
+      await requirePermission(userId, "Edit any group");
+    } catch {
+      throw new Error("Only a group admin can perform this action.");
+    }
   }
 
   await prisma.groupMember.delete({

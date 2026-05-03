@@ -1,10 +1,11 @@
 "use client";
 
-import Link from "next/link";
+// navigation via router.push to avoid deprecated Link legacyBehavior
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
+import ChatRoundedIcon from "@mui/icons-material/ChatRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import GroupRoundedIcon from "@mui/icons-material/GroupRounded";
@@ -33,7 +34,7 @@ import {
 } from "@mui/material";
 import { AppNavbar } from "@/components/navigation/app-navbar";
 import { fetchFromBackend, markExpenseDeleted } from "@/lib/backend-api";
-import { getToken } from "@/lib/auth-storage";
+import { getRole, getToken } from "@/lib/auth-storage";
 import { EXPENSE_CATEGORIES } from "@/lib/types";
 import type { BackendStatus, DashboardSummary, ExpenseCategory, ExpenseListResponse, GroupStats, GroupSummary } from "@/lib/types";
 
@@ -53,6 +54,7 @@ export function GroupPreviewPage({ groupId }: { groupId: number }) {
   const [expenses, setExpenses] = useState<ExpenseListResponse | null>(null);
   const [stats, setStats] = useState<GroupStats | null>(null);
   const [tabValue, setTabValue] = useState<"expenses" | "members">("expenses");
+  
   const [generatorBusy, setGeneratorBusy] = useState(false);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [generatorRunning, setGeneratorRunning] = useState(false);
@@ -61,6 +63,7 @@ export function GroupPreviewPage({ groupId }: { groupId: number }) {
   const [newMemberIdentifier, setNewMemberIdentifier] = useState("");
   const [memberBusy, setMemberBusy] = useState(false);
   const [groupActionBusy, setGroupActionBusy] = useState(false);
+  const [appRole] = useState<string | null>(getRole);
   const [expensePage, setExpensePage] = useState(1);
   const [expenseSortBy, setExpenseSortBy] = useState<"date" | "amount">("date");
   const [expenseSortOrder, setExpenseSortOrder] = useState<"asc" | "desc">("desc");
@@ -72,6 +75,8 @@ export function GroupPreviewPage({ groupId }: { groupId: number }) {
   const [isLoadingMoreExpenses, setIsLoadingMoreExpenses] = useState(false);
   const [prefetchedExpenses, setPrefetchedExpenses] = useState<{ page: number; response: ExpenseListResponse } | null>(null);
   const expenseLoadMoreRef = useRef<HTMLDivElement | null>(null);
+  const isAppAdmin = appRole === "admin";
+  const canManageGroup = Boolean(group?.isAdmin || isAppAdmin);
 
   const fetchExpensePage = useCallback(async (page: number) => {
     const params = new URLSearchParams({
@@ -164,10 +169,6 @@ export function GroupPreviewPage({ groupId }: { groupId: number }) {
   }, [expensePage, expenseTotalPages, fetchExpensePage, isLoadingMoreExpenses, prefetchedExpenses]);
 
   useEffect(() => {
-    if (tabValue !== "expenses") {
-      return;
-    }
-
     const anchor = expenseLoadMoreRef.current;
     if (!anchor) {
       return;
@@ -181,7 +182,7 @@ export function GroupPreviewPage({ groupId }: { groupId: number }) {
 
     observer.observe(anchor);
     return () => observer.disconnect();
-  }, [loadMoreExpenses, tabValue]);
+  }, [loadMoreExpenses]);
 
   useEffect(() => {
     const handleBackendUpdate = (event: Event) => {
@@ -403,9 +404,8 @@ export function GroupPreviewPage({ groupId }: { groupId: number }) {
       <Container maxWidth="xl" sx={{ py: { xs: 3, md: 5 } }}>
         <Stack spacing={3}>
           <Button
-            component={Link}
-            href="/groups"
             startIcon={<ArrowBackRoundedIcon />}
+            onClick={() => router.push("/groups")}
             sx={{ alignSelf: "flex-start", color: "#e79aaa", fontWeight: 700, textTransform: "none" }}
           >
             Back to Groups
@@ -422,7 +422,7 @@ export function GroupPreviewPage({ groupId }: { groupId: number }) {
             }}
           >
             <Box sx={{ minWidth: 0 }}>
-              <Stack direction="column" spacing={1.0} sx={{ alignItems: "flex-start" }}>
+              <Stack direction="row" spacing={3.0} sx={{ alignItems: "flex-start", mb: 0.9 }}>
                 <Typography
                   variant="h2"
                   sx={{
@@ -436,35 +436,23 @@ export function GroupPreviewPage({ groupId }: { groupId: number }) {
                 >
                   {group?.name ?? "Group preview"}
                 </Typography>
-                {group?.isAdmin ? (
-                  <Button
-                    component={Link}
-                    href={`/groups/${groupId}/edit`}
-                    variant="outlined"
-                    startIcon={<EditRoundedIcon />}
-                    sx={{
-                      borderRadius: 999,
-                      minHeight: { xs: 40, md: 46 },
-                      px: { xs: 1.4, md: 1.8 },
-                      fontSize: { xs: 12, md: 14 },
-                      fontWeight: 900,
-                      textTransform: "none",
-                      borderColor: "#e83ea8",
-                      color: "#b42352",
-                      bgcolor: "rgba(255,255,255,0.88)",
-                      ml: 0,
-                      mt: 0,
-                      whiteSpace: "nowrap",
-                      alignSelf: "flex-start",
-                      "&:hover": {
-                        borderColor: "#d9369b",
-                        bgcolor: "rgba(255,235,246,0.92)",
-                      },
-                    }}
-                  >
-                    Edit group
-                  </Button>
-                ) : null}
+                <Button
+                  variant="outlined"
+                  startIcon={<ChatRoundedIcon />}
+                  onClick={() => router.push(`/groups/${groupId}/chat`)}
+                  sx={{
+                    borderRadius: 999,
+                    minHeight: { xs: 40, md: 46 },
+                    px: { xs: 1.4, md: 2 },
+                    fontSize: { xs: 11, md: 13 },
+                    fontWeight: 800,
+                    textTransform: "none",
+                    flexShrink: 0,
+                    mt: { xs: 0, md: 0 },
+                  }}
+                >
+                  Group chat
+                </Button>
               </Stack>
               {group?.description ? (
                 <Typography
@@ -473,6 +461,33 @@ export function GroupPreviewPage({ groupId }: { groupId: number }) {
                 >
                   {group.description}
                 </Typography>
+              ) : null}
+              {canManageGroup ? (
+                <Button
+                  variant="outlined"
+                  startIcon={<EditRoundedIcon />}
+                  sx={{
+                    borderRadius: 999,
+                    minHeight: { xs: 40, md: 46 },
+                    px: { xs: 1.4, md: 1.8 },
+                    fontSize: { xs: 12, md: 14 },
+                    fontWeight: 900,
+                    textTransform: "none",
+                    borderColor: "#e83ea8",
+                    color: "#b42352",
+                    bgcolor: "rgba(255,255,255,0.88)",
+                    mt: 1.2,
+                    whiteSpace: "nowrap",
+                    alignSelf: "flex-start",
+                    "&:hover": {
+                      borderColor: "#d9369b",
+                      bgcolor: "rgba(255,235,246,0.92)",
+                    },
+                  }}
+                  onClick={() => router.push(`/groups/${groupId}/edit`)}
+                >
+                  Edit group
+                </Button>
               ) : null}
             </Box>
 
@@ -513,9 +528,8 @@ export function GroupPreviewPage({ groupId }: { groupId: number }) {
               </Button>
 
               <Button
-                component={Link}
-                href={`/groups/${groupId}/expenses/new`}
                 aria-label="Add expense"
+                onClick={() => router.push(`/groups/${groupId}/expenses/new`)}
                 sx={{
                   width: { xs: 48, md: 72 },
                   height: { xs: 48, md: 72 },
@@ -542,9 +556,9 @@ export function GroupPreviewPage({ groupId }: { groupId: number }) {
                   alignSelf: { xs: "center", sm: "auto" },
                   flex: "0 0 auto",
                 }}
-              >
-                <AddRoundedIcon sx={{ fontSize: { xs: 24, md: 34 } }} />
-              </Button>
+                >
+                  <AddRoundedIcon sx={{ fontSize: { xs: 24, md: 34 } }} />
+                </Button>
             </Stack>
           </Box>
 
@@ -561,11 +575,7 @@ export function GroupPreviewPage({ groupId }: { groupId: number }) {
           ) : null}
 
           <Box sx={{ borderBottom: "1px solid rgba(46, 58, 86, 0.12)" }}>
-            <Tabs
-              value={tabValue}
-              onChange={(_event, value) => setTabValue(value)}
-              sx={{ minHeight: 54 }}
-            >
+            <Tabs value={tabValue} onChange={(_, newValue) => setTabValue(newValue)} sx={{ minHeight: 54 }}>
               <Tab
                 value="expenses"
                 icon={<ReceiptLongRoundedIcon />}
@@ -577,13 +587,13 @@ export function GroupPreviewPage({ groupId }: { groupId: number }) {
                 value="members"
                 icon={<GroupRoundedIcon />}
                 iconPosition="start"
-                label={`MEMBERS (${group?.members.filter(Boolean).length ?? 0})`}
+                label="MEMBERS"
                 sx={{ minHeight: 54, fontWeight: 700 }}
               />
             </Tabs>
           </Box>
 
-          {tabValue === "expenses" ? (
+          {tabValue === "expenses" && (
             <Box sx={{ display: "grid", gap: 2, alignItems: "start", gridTemplateColumns: { xs: "1fr", lg: "minmax(0, 1.55fr) minmax(300px, 0.8fr)" } }}>
               <Card sx={{ borderRadius: 1.5, background: "rgba(255,255,255,0.82)" }}>
                 <CardContent sx={{ p: 0 }}>
@@ -706,12 +716,11 @@ export function GroupPreviewPage({ groupId }: { groupId: number }) {
                             <TableCell>
                               <Stack direction="row" spacing={0.5} sx={{ flexWrap: "wrap" }}>
                                 <Button
-                                  component={Link}
-                                  href={`/groups/${groupId}/expenses/${expense.id}`}
                                   variant="text"
                                   size="small"
                                   aria-label="Edit expense"
                                   sx={{ minWidth: 0, p: 0.5 }}
+                                  onClick={() => router.push(`/groups/${groupId}/expenses/${expense.id}`)}
                                 >
                                   <EditRoundedIcon sx={{ fontSize: 18 }} />
                                 </Button>
@@ -747,7 +756,7 @@ export function GroupPreviewPage({ groupId }: { groupId: number }) {
                                 </Typography>
                               </Box>
                               <Stack direction="row" spacing={0.6} sx={{ flexShrink: 0 }}>
-                                <Button component={Link} href={`/groups/${groupId}/expenses/${expense.id}`} variant="outlined" size="small" sx={{ whiteSpace: "nowrap" }}>
+                                <Button variant="outlined" size="small" sx={{ whiteSpace: "nowrap" }} onClick={() => router.push(`/groups/${groupId}/expenses/${expense.id}`)}>
                                   Edit
                                 </Button>
                                 <Button
@@ -955,7 +964,9 @@ export function GroupPreviewPage({ groupId }: { groupId: number }) {
                 </Card>
               </Stack>
             </Box>
-          ) : (
+          )}
+
+          {tabValue === "members" && (
             <Stack spacing={2}>
               <Card sx={{ borderRadius: 1.5, background: "rgba(255,255,255,0.82)" }}>
                 <CardContent sx={{ p: 2.4 }}>
@@ -993,7 +1004,7 @@ export function GroupPreviewPage({ groupId }: { groupId: number }) {
                   }
 
                   const isAdmin = group?.adminIds.includes(member.id) ?? false;
-                  const canDelete = Boolean(group?.isAdmin && !isAdmin);
+                  const canDelete = Boolean(canManageGroup && !isAdmin);
 
                   return (
                     <Card key={member.id} sx={{ borderRadius: 1.5, background: "rgba(255,255,255,0.82)" }}>
@@ -1032,8 +1043,8 @@ export function GroupPreviewPage({ groupId }: { groupId: number }) {
                   color="error"
                   variant="outlined"
                   onClick={() => void handleDeleteGroup()}
-                  disabled={groupActionBusy || !group?.isAdmin}
-                  sx={{ opacity: group?.isAdmin ? 1 : 0.5 }}
+                  disabled={groupActionBusy || !canManageGroup}
+                  sx={{ opacity: canManageGroup ? 1 : 0.5 }}
                 >
                   Delete Group
                 </Button>
