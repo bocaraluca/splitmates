@@ -1,12 +1,12 @@
 import { Server as SocketIOServer } from 'socket.io';
 import { connectToMongoDB } from './mongodb.ts';
-import { ChatMessage } from './models/ChatMessage.ts';
 import { prisma } from './prisma.ts';
+import { createMessage, deleteMessage } from '@/lib/splitmates/services/chat-service';
 import type { Server as HTTPServer } from 'http';
 
 let io: SocketIOServer | null = null;
 
-const activeUsers = new Map<number, Set<number>>();
+const activeUsers = new Map<number, Set<number>>();  // groupId -> set of active userIds in that group
 
 export async function initializeSocket(server: HTTPServer) {
   try {
@@ -131,28 +131,27 @@ export async function initializeSocket(server: HTTPServer) {
           return;
         }
 
-        const message = await ChatMessage.create({
-          groupId,
-          userId,
-          username,
-          content: content.trim(),
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        });
+        try {
+          const message = await createMessage(groupId, userId, username, content);
 
-        io!.to(`group_${groupId}`).emit('message:new', {
-          id: message._id.toString(),
-          groupId,
-          userId,
-          username,
-          content: message.content,
-          createdAt: message.createdAt.toISOString(),
-        });
+          io!.to(`group_${groupId}`).emit('message:new', {
+            id: message._id.toString(),
+            groupId,
+            userId,
+            username,
+            content: message.content,
+            createdAt: message.createdAt.toISOString(),
+          });
 
-        socket.emit('message:ack', {
-          messageId: message._id.toString(),
-          timestamp: new Date().toISOString(),
-        });
+          socket.emit('message:ack', {
+            messageId: message._id.toString(),
+            timestamp: new Date().toISOString(),
+          });
+        } catch (err: any) {
+          console.error('Error creating chat message:', err);
+          const msg = err && err.code === 'FORBIDDEN' ? 'Not authorized to post in this group' : 'Failed to send message';
+          socket.emit('error', { message: msg });
+        }
       } catch (error) {
         console.error('Error in chat:message:', error);
         socket.emit('error', { message: 'Failed to send message' });
@@ -164,29 +163,20 @@ export async function initializeSocket(server: HTTPServer) {
         const { groupId, messageId } = data;
         const userId = socket.data.userId;
 
-        const message = await ChatMessage.findById(messageId);
-
-        if (!message) {
-          socket.emit('error', { message: 'Message not found' });
-          return;
+        try {
+          await deleteMessage(messageId, userId, groupId);
+          io!.to(`group_${groupId}`).emit('message:deleted', {
+            messageId,
+            timestamp: new Date().toISOString(),
+          });
+        } catch (err: any) {
+          console.error('Error deleting chat message:', err);
+          let msg = 'Failed to delete message';
+          if (err && err.code === 'NOT_FOUND') msg = 'Message not found';
+          else if (err && err.code === 'FORBIDDEN') msg = 'Can only delete your own messages';
+          else if (err && err.code === 'INVALID') msg = 'Message not in this group';
+          socket.emit('error', { message: msg });
         }
-
-        if (message.userId !== userId) {
-          socket.emit('error', { message: 'Can only delete your own messages' });
-          return;
-        }
-
-        if (message.groupId !== groupId) {
-          socket.emit('error', { message: 'Message not in this group' });
-          return;
-        }
-
-        await ChatMessage.findByIdAndDelete(messageId);
-
-        io!.to(`group_${groupId}`).emit('message:deleted', {
-          messageId,
-          timestamp: new Date().toISOString(),
-        });
       } catch (error) {
         console.error('Error in chat:delete:', error);
         socket.emit('error', { message: 'Failed to delete message' });

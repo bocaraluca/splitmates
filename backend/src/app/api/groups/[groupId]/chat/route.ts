@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { ChatMessage } from '@/lib/models/ChatMessage';
 import { getCurrentUserFromRequest } from '@/lib/splitmates/services/auth/session-service';
+import { getMessages } from '@/lib/splitmates/services/chat-service';
 
 export async function GET(
     request: NextRequest,
@@ -17,24 +16,8 @@ export async function GET(
         }
 
         const currentUser = await getCurrentUserFromRequest(request);
-
         if (!currentUser) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        const group = await prisma.group.findUnique({
-            where: { id: groupId },
-            include: { members: true },
-        });
-
-        if (!group) {
-            return NextResponse.json({ error: 'Group not found' }, { status: 404 });
-        }
-
-        const isGroupMember = group.members.some((member) => member.userId === currentUser.id);
-
-        if (!isGroupMember) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
         const url = new URL(request.url);
@@ -42,44 +25,21 @@ export async function GET(
         const pageSize = parseInt(url.searchParams.get('pageSize') || '50');
 
         if (Number.isNaN(page) || Number.isNaN(pageSize) || page < 1 || pageSize < 1 || pageSize > 100) {
-            return NextResponse.json(
-                { error: 'Invalid pagination parameters' },
-                { status: 400 }
-            );
+            return NextResponse.json({ error: 'Invalid pagination parameters' }, { status: 400 });
         }
 
-        const skip = (page - 1) * pageSize;
-        console.log(`Querying MongoDB for groupId=${groupId}, page=${page}, skip=${skip}`);
-        
-        const [messages, totalMessages] = await Promise.all([
-            ChatMessage.find({ groupId })
-                .sort({ createdAt: -1 })
-                .skip(skip)
-                .limit(pageSize)
-                .lean(),
-            ChatMessage.countDocuments({ groupId }),
-        ]);
-
-        console.log(`Retrieved ${messages.length} messages, total: ${totalMessages}`);
-
-        const orderedMessages = messages
-            .reverse()
-            .map((message) => ({
-                id: message._id.toString(),
-                groupId: message.groupId,
-                userId: message.userId,
-                username: message.username,
-                content: message.content,
-                createdAt: message.createdAt.toISOString(),
-            }));
-
-        return NextResponse.json({
-            messages: orderedMessages,
-            totalMessages,
-            page,
-            pageSize,
-            totalPages: Math.ceil(totalMessages / pageSize),
-        });
+        try {
+            const result = await getMessages(groupId, page, pageSize, currentUser.id);
+            return NextResponse.json(result);
+        } catch (err: any) {
+            if (err && err.code === 'FORBIDDEN') {
+                return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+            }
+            if (err && String(err.message) === 'Group not found') {
+                return NextResponse.json({ error: 'Group not found' }, { status: 404 });
+            }
+            throw err;
+        }
     } catch (error) {
         console.error('Error fetching chat history:', error);
         return NextResponse.json(
