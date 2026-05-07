@@ -23,6 +23,8 @@ model User {
   participatedExpenses  ExpenseParticipant[]
   paymentsFrom Payment[]  @relation("PaymentFromUser")
   paymentsTo Payment[]  @relation("PaymentToUser")
+  logs Log[]
+  suspiciousUser SuspiciousUser?
 
   @@index([roleId])
 }
@@ -40,6 +42,7 @@ model Group {
   members GroupMember[]
   expenses Expense[]     
   payments Payment[]     
+  logs Log[]
 }
 
 enum GroupCategory {
@@ -149,6 +152,7 @@ model Role {
 
   users User[]
   rolePermissions RolePermission[]
+  logs Log[]
 }
 
 model Permission {
@@ -170,3 +174,234 @@ model RolePermission {
 
   @@index([permissionId])
 }
+
+model Log {
+  id BigInt @id @default(autoincrement())
+  userId Int
+  groupId Int?
+  roleId Int?
+  roleTitle String?
+  actionType LogActionType
+  actionJson Json?
+  ip String?
+  clientInfo String?
+  requestId String? @unique
+  outcome LogOutcome?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role? @relation(fields: [roleId], references: [id], onDelete: SetNull)
+  group Group? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  observations Observation[]
+
+  @@index([createdAt])
+  @@index([userId, createdAt])
+  @@index([roleId])
+  @@index([actionType])
+  @@map("logs")
+}
+
+enum LogOutcome {
+  success
+  failed
+  forbidden
+  validation_error
+  not_found
+  rate_limited
+}
+
+enum LogActionType {
+  GROUP_CHAT_HISTORY_GET
+  GROUP_CHAT_HISTORY_GET_INVALID_GROUP_ID
+  GROUP_CHAT_HISTORY_GET_UNAUTHORIZED
+  GROUP_CHAT_HISTORY_GET_INVALID_PAGINATION
+  GROUP_CHAT_HISTORY_GET_FORBIDDEN
+  GROUP_CHAT_HISTORY_GET_NOT_FOUND
+  GROUP_CHAT_HISTORY_GET_FAILED
+  GROUP_CHAT_MESSAGE_DELETE
+  GROUP_CHAT_MESSAGE_DELETE_INVALID_GROUP_ID
+  GROUP_CHAT_MESSAGE_DELETE_UNAUTHORIZED
+  GROUP_CHAT_MESSAGE_DELETE_FORBIDDEN
+  GROUP_CHAT_MESSAGE_DELETE_NOT_FOUND
+  GROUP_CHAT_MESSAGE_DELETE_FAILED
+  GROUP_DETAIL_GET
+  GROUP_DETAIL_GET_INVALID_GROUP_ID
+  GROUP_DETAIL_GET_UNAUTHORIZED
+  GROUP_DETAIL_GET_FORBIDDEN
+  GROUP_DETAIL_GET_NOT_FOUND
+  GROUP_DETAIL_GET_FAILED
+  GROUP_DETAIL_PATCH
+  GROUP_DETAIL_PATCH_INVALID_GROUP_ID
+  GROUP_DETAIL_PATCH_UNAUTHORIZED
+  GROUP_DETAIL_PATCH_NOT_FOUND
+  GROUP_DETAIL_PATCH_FAILED
+  GROUP_DETAIL_DELETE
+  GROUP_DETAIL_DELETE_INVALID_GROUP_ID
+  GROUP_DETAIL_DELETE_UNAUTHORIZED
+  GROUP_DETAIL_DELETE_NOT_FOUND
+  GROUP_DETAIL_DELETE_FAILED
+  ADMIN_GROUP_DELETE
+  ADMIN_GROUP_DELETE_INVALID_GROUP_ID
+  ADMIN_GROUP_DELETE_UNAUTHORIZED
+  ADMIN_GROUP_DELETE_FORBIDDEN
+  ADMIN_GROUP_DELETE_NOT_FOUND
+  ADMIN_GROUP_DELETE_FAILED
+  ADMIN_OVERVIEW_GET
+  ADMIN_OVERVIEW_GET_UNAUTHORIZED
+  ADMIN_OVERVIEW_GET_FORBIDDEN
+  ADMIN_OVERVIEW_GET_FAILED
+  ADMIN_USER_DELETE
+  ADMIN_USER_DELETE_INVALID_USER_ID
+  ADMIN_USER_DELETE_UNAUTHORIZED
+  ADMIN_USER_DELETE_FORBIDDEN
+  ADMIN_USER_DELETE_NOT_FOUND
+  ADMIN_USER_DELETE_FAILED
+  ADMIN_USER_ROLE_UPDATE
+  ADMIN_USER_ROLE_UPDATE_INVALID_USER_ID
+  ADMIN_USER_ROLE_UPDATE_INVALID_ROLE
+  ADMIN_USER_ROLE_UPDATE_UNAUTHORIZED
+  ADMIN_USER_ROLE_UPDATE_FORBIDDEN
+  ADMIN_USER_ROLE_UPDATE_NOT_FOUND
+  ADMIN_USER_ROLE_UPDATE_FAILED
+  ADMIN_LOGS_GET
+  ADMIN_LOGS_GET_UNAUTHORIZED
+  ADMIN_LOGS_GET_FORBIDDEN
+  ADMIN_LOGS_GET_FAILED
+  ADMIN_SUSPICIOUS_GET
+  ADMIN_SUSPICIOUS_GET_UNAUTHORIZED
+  ADMIN_SUSPICIOUS_GET_FORBIDDEN
+  ADMIN_SUSPICIOUS_GET_FAILED
+  ADMIN_SUSPICIOUS_PATCH
+  ADMIN_SUSPICIOUS_PATCH_UNAUTHORIZED
+  ADMIN_SUSPICIOUS_PATCH_FORBIDDEN
+  ADMIN_SUSPICIOUS_PATCH_INVALID_USER_ID
+  ADMIN_SUSPICIOUS_PATCH_NOT_FOUND
+  ADMIN_SUSPICIOUS_PATCH_FAILED
+  DASHBOARD_GET
+  DASHBOARD_GET_NO_USERS
+  DASHBOARD_GET_FAILED
+  EVENTS_STREAM_CONNECT
+  EVENTS_STREAM_DISCONNECT
+  GENERATOR_START
+  GENERATOR_START_INVALID_PAYLOAD
+  GENERATOR_START_FAILED
+  GENERATOR_STATUS_GET
+  GENERATOR_STATUS_GET_FAILED
+  GENERATOR_STOP
+  GENERATOR_STOP_FAILED
+  GROUPS_GET
+  GROUPS_GET_UNAUTHORIZED
+  GROUPS_GET_FAILED
+  GROUPS_CREATE
+  GROUPS_CREATE_UNAUTHORIZED
+  GROUPS_CREATE_FAILED
+  GROUP_MEMBERS_ADD
+  GROUP_MEMBERS_ADD_UNAUTHORIZED
+  GROUP_MEMBERS_ADD_INVALID_GROUP_ID
+  GROUP_MEMBERS_ADD_FAILED
+  GROUP_MEMBERS_REMOVE
+  GROUP_MEMBERS_REMOVE_UNAUTHORIZED
+  GROUP_MEMBERS_REMOVE_INVALID_GROUP_ID
+  GROUP_MEMBERS_REMOVE_NOT_FOUND
+  GROUP_MEMBERS_REMOVE_FAILED
+  GROUP_EXPENSES_GET
+  GROUP_EXPENSES_GET_INVALID_GROUP_ID
+  GROUP_EXPENSES_GET_NOT_FOUND
+  GROUP_EXPENSES_GET_FAILED
+  GROUP_EXPENSES_CREATE
+  GROUP_EXPENSES_CREATE_UNAUTHORIZED
+  GROUP_EXPENSES_CREATE_INVALID_GROUP_ID
+  GROUP_EXPENSES_CREATE_FAILED
+  GROUP_EXPENSES_DETAIL_GET
+  GROUP_EXPENSES_DETAIL_GET_INVALID_GROUP_ID
+  GROUP_EXPENSES_DETAIL_GET_NOT_FOUND
+  GROUP_EXPENSES_DETAIL_GET_FAILED
+  GROUP_EXPENSES_DETAIL_PATCH
+  GROUP_EXPENSES_DETAIL_PATCH_UNAUTHORIZED
+  GROUP_EXPENSES_DETAIL_PATCH_INVALID_GROUP_ID
+  GROUP_EXPENSES_DETAIL_PATCH_NOT_FOUND
+  GROUP_EXPENSES_DETAIL_PATCH_FAILED
+  GROUP_EXPENSES_DETAIL_DELETE
+  GROUP_EXPENSES_DETAIL_DELETE_UNAUTHORIZED
+  GROUP_EXPENSES_DETAIL_DELETE_INVALID_GROUP_ID
+  GROUP_EXPENSES_DETAIL_DELETE_NOT_FOUND
+  GROUP_EXPENSES_DETAIL_DELETE_FAILED
+  GROUP_STATS_GET
+  GROUP_STATS_GET_INVALID_GROUP_ID
+  GROUP_STATS_GET_NOT_FOUND
+  GROUP_STATS_GET_FAILED
+  GROUP_PAYMENTS_GET
+  GROUP_PAYMENTS_GET_INVALID_GROUP_ID
+  GROUP_PAYMENTS_GET_NOT_FOUND
+  GROUP_PAYMENTS_GET_FAILED
+  GROUP_PAYMENTS_CREATE
+  GROUP_PAYMENTS_CREATE_UNAUTHORIZED
+  GROUP_PAYMENTS_CREATE_INVALID_GROUP_ID
+  GROUP_PAYMENTS_CREATE_FAILED
+  GROUP_LEAVE
+  GROUP_LEAVE_UNAUTHORIZED
+  GROUP_LEAVE_INVALID_GROUP_ID
+  GROUP_LEAVE_FAILED
+  AUTH_LOGIN_SUCCESS
+  AUTH_LOGIN_FAILED
+  AUTH_LOGOUT
+  AUTH_LOGOUT_FAILED
+  AUTH_SIGNUP_SUCCESS
+  AUTH_SIGNUP_FAILED
+}
+
+model SuspiciousUser {
+  userId  Int @id
+  reason String?
+  status SuspiciousStatus @default(underReview)
+  lastSeen DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  observations Observation[]
+
+  @@index([status])
+  @@map("suspicious_users")
+}
+
+enum SuspiciousStatus {
+  underReview
+  cleared
+}
+
+model Observation {
+  id Int @id @default(autoincrement())
+  suspiciousUserId Int
+  ruleId Int?
+  logId BigInt?
+  scoreIncrease Float
+  note String?
+  actionJson Json?
+  createdAt DateTime @default(now())
+
+  suspiciousUser SuspiciousUser @relation(fields: [suspiciousUserId], references: [userId], onDelete: Cascade)
+  rule DetectionRule? @relation(fields: [ruleId], references: [id], onDelete: SetNull)
+  log Log? @relation(fields: [logId], references: [id], onDelete: SetNull)
+
+  @@index([suspiciousUserId])
+  @@index([ruleId])
+  @@index([createdAt])
+  @@map("observations")
+}
+
+model DetectionRule {
+  id  Int @id @default(autoincrement())
+  key String @unique
+  name String
+  description String?
+  enabled Boolean @default(true)
+  weight Float @default(1)
+  params Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  observations Observation[]
+
+  @@index([enabled])
+  @@map("detection_rules")
+}
+

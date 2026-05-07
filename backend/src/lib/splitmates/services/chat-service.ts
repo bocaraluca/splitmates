@@ -1,5 +1,5 @@
-import { prisma } from '@/lib/prisma';
-import { ChatMessage } from '@/lib/models/ChatMessage';
+import { prisma } from '../../prisma.ts';
+import { ChatMessage } from '../../models/ChatMessage.ts';
 
 export async function getMessages(
   groupId: number,

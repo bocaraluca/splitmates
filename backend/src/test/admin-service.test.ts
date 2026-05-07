@@ -53,7 +53,7 @@ describe("admin-service", () => {
         description: "Home",
         category: "household",
         createdAt: new Date("2026-05-02T00:00:00.000Z"),
-        members: [{ user: { id: 1, username: "raluca" } }],
+        members: [{ isAdmin: true, user: { id: 1, username: "raluca" } }],
       },
     ]);
 

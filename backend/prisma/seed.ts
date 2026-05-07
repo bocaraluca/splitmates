@@ -75,6 +75,11 @@ function pickRandomSubset<T>(items: T[], minSize = 2): T[] {
 
 async function deleteAllData() {
   await prisma.session.deleteMany({});
+  await prisma.alert.deleteMany({});
+  await prisma.observation.deleteMany({});
+  await prisma.suspiciousUser.deleteMany({});
+  await prisma.detectionRule.deleteMany({});
+  await prisma.log.deleteMany({});
   await prisma.expenseParticipant.deleteMany({});
   await prisma.expense.deleteMany({});
   await prisma.payment.deleteMany({});
@@ -92,6 +97,7 @@ async function seedRolesAndPermissions() {
 
   const permissionTitles = [
     "View all users",
+    "View all logs",
     "Delete user",
     "Update user role",
     "Create group",
@@ -131,6 +137,45 @@ async function seedRolesAndPermissions() {
   });
 
   return { adminRole, userRole };
+}
+
+async function seedDetectionRules() {
+  await prisma.detectionRule.createMany({
+    data: [
+      {
+        key: "multiple_failed_logins",
+        name: "5+ failed logins in 5 minutes",
+        description: "Repeated failed login attempts from the same user.",
+        enabled: true,
+        weight: 5,
+        params: { count: 5, windowMin: 5 },
+      },
+      {
+        key: "many_delete_actions",
+        name: "10+ delete actions in 1 hour",
+        description: "Repeated delete actions made by the same user.",
+        enabled: true,
+        weight: 3,
+        params: { count: 10, windowMin: 60 },
+      },
+      {
+        key: "repeated_forbidden_actions",
+        name: "5+ forbidden actions in 1 hour",
+        description: "Repeated forbidden attempts made by the same user.",
+        enabled: true,
+        weight: 4,
+        params: { count: 5, windowMin: 60 },
+      },
+      {
+        key: "too_many_requests_blocked",
+        name: "4+ blocked requests in 1 hour",
+        description: "Repeated rate-limited requests.",
+        enabled: true,
+        weight: 2,
+        params: { count: 4, windowMin: 60 },
+      },
+    ],
+  });
 }
 
 async function seedExpensesForGroup(
@@ -180,6 +225,7 @@ async function main() {
   await deleteAllData();
 
   const { adminRole, userRole } = await seedRolesAndPermissions();
+  await seedDetectionRules();
   const passwordHash = bcrypt.hashSync(PASSWORD, 10);
 
   const raluca = await prisma.user.create({

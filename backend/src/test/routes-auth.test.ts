@@ -8,8 +8,10 @@ beforeEach(() => {
 describe("auth and misc routes", () => {
   it("auth/login handles success, invalid creds, validation, and bad JSON", async () => {
     const loginUser = vi.fn();
+    const logHttpAction = vi.fn();
 
     vi.doMock("@/lib/splitmates", () => ({ loginUser }));
+    vi.doMock("@/lib/splitmates/api/http-action-log", () => ({ logHttpAction }));
 
     const mod = await import("@/app/api/auth/login/route");
 
@@ -22,7 +24,7 @@ describe("auth and misc routes", () => {
     const okRes = await mod.POST(okReq);
     expect(okRes.status).toBe(200);
 
-    loginUser.mockRejectedValueOnce(new Error("Invalid login credentials."));
+    loginUser.mockRejectedValueOnce(Object.assign(new Error("Invalid login credentials."), { userId: 1 }));
     const badCredReq = new Request("http://localhost/api/auth/login", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -30,6 +32,13 @@ describe("auth and misc routes", () => {
     });
     const badCredRes = await mod.POST(badCredReq);
     expect(badCredRes.status).toBe(401);
+    expect(logHttpAction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actionType: "AUTH_LOGIN_FAILED",
+        fallbackUserId: 1,
+        actionJson: { identifier: "raluca" },
+      }),
+    );
 
     const validationReq = new Request("http://localhost/api/auth/login", {
       method: "POST",

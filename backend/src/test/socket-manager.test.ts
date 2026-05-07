@@ -56,7 +56,7 @@ function createSocket(token?: string) {
   const rooms = new Set<string>();
   return {
     id: "socket-1",
-    data: {} as { userId?: number; username?: string },
+    data: { userId: undefined as number | undefined, username: undefined as string | undefined },
     handshake: { auth: token ? { token } : {} },
     rooms,
     handlers,
@@ -96,18 +96,21 @@ describe("socket-manager", () => {
   });
 
   it("initializes auth and chat handlers and broadcasts realtime events", async () => {
+    const expiredAt = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const validUntil = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const createdAt = new Date(Date.now() - 60 * 60 * 1000);
+
     connectToMongoDB.mockResolvedValueOnce(undefined);
     prisma.session.findUnique
       .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce({ user: { id: 1, username: "raluca" }, expiresAt: new Date("2026-05-01T00:00:00.000Z") })
-      .mockResolvedValueOnce({ user: { id: 1, username: "raluca" }, expiresAt: new Date("2026-05-05T00:00:00.000Z") })
-      .mockResolvedValueOnce({ user: { id: 1, username: "raluca" }, expiresAt: new Date("2026-05-05T00:00:00.000Z") });
+      .mockResolvedValueOnce({ user: { id: 1, username: "raluca" }, expiresAt: expiredAt })
+      .mockResolvedValueOnce({ user: { id: 1, username: "raluca" }, expiresAt: validUntil });
     prisma.group.findUnique
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce({ id: 5, members: [{ userId: 2 }] })
       .mockResolvedValue({ id: 5, members: [{ userId: 1 }] });
     prisma.user.findMany.mockResolvedValue([{ id: 1, username: "raluca" }]);
-    ChatMessage.create.mockResolvedValue({ _id: { toString: () => "msg-1" }, content: "Hello", createdAt: new Date("2026-05-04T00:00:00.000Z") });
+    ChatMessage.create.mockResolvedValue({ _id: { toString: () => "msg-1" }, content: "Hello", createdAt });
     ChatMessage.findById
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce({ _id: "msg-1", groupId: 5, userId: 2 })
@@ -134,13 +137,14 @@ describe("socket-manager", () => {
     await io.middleware!(invalidSessionSocket, invalidSessionNext);
     expect(invalidSessionNext).toHaveBeenCalledWith(expect.any(Error));
 
-    prisma.session.findUnique.mockResolvedValueOnce({ user: { id: 1, username: "raluca" }, expiresAt: new Date("2026-05-01T00:00:00.000Z") });
     const expiredSocket = createSocket("expired");
+    prisma.session.findUnique.mockResolvedValueOnce({ user: { id: 1, username: "raluca" }, expiresAt: expiredAt });
     const expiredNext = vi.fn();
     await io.middleware!(expiredSocket, expiredNext);
     expect(expiredNext).toHaveBeenCalledWith(expect.any(Error));
 
     const validSocket = createSocket("valid");
+    prisma.session.findUnique.mockResolvedValueOnce({ user: { id: 1, username: "raluca" }, expiresAt: validUntil });
     await io.middleware!(validSocket, vi.fn());
     expect(validSocket.data).toEqual({ userId: 1, username: "raluca" });
 
@@ -165,7 +169,7 @@ describe("socket-manager", () => {
     ChatMessage.create.mockResolvedValueOnce({
       _id: { toString: () => "msg-1" },
       content: "Hello",
-      createdAt: new Date("2026-05-04T00:00:00.000Z"),
+      createdAt,
     });
     await validSocket.handlers["chat:message"]({ groupId: 5, content: "Hello" });
     expect(validSocket.emit).toHaveBeenCalledWith("message:ack", expect.objectContaining({ messageId: "msg-1" }));

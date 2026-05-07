@@ -22,7 +22,6 @@ try {
   console.log("Socket.IO initialized successfully");
 } catch (error) {
   console.error("Failed to initialize Socket.IO:", error);
-  process.exit(1);
 }
 
 const websocketServer = new WebSocketServer({ noServer: true });

@@ -1,7 +1,7 @@
 import { Server as SocketIOServer } from 'socket.io';
 import { connectToMongoDB } from './mongodb.ts';
 import { prisma } from './prisma.ts';
-import { createMessage, deleteMessage } from '@/lib/splitmates/services/chat-service';
+import { createMessage, deleteMessage } from './splitmates/services/chat-service.ts';
 import type { Server as HTTPServer } from 'http';
 
 let io: SocketIOServer | null = null;

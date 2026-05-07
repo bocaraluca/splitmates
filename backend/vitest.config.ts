@@ -11,7 +11,6 @@ export default defineConfig({
     environment: "node",
     fileParallelism: false,
     maxWorkers: 1,
-    minWorkers: 1,
     setupFiles: ["./src/test-db/global-setup.ts"],
     coverage: {
       provider: "v8",

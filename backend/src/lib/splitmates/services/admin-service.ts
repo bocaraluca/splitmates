@@ -24,9 +24,6 @@ export async function getAdminOverview() {
     prisma.group.findMany({
       include: {
         members: {
-          where: {
-            isAdmin: true,
-          },
           include: {
             user: {
               select: {
@@ -60,7 +57,7 @@ export async function getAdminOverview() {
       description: group.description,
       category: group.category,
       createdAt: toIsoDate(group.createdAt),
-      admins: group.members.map((member) => member.user),
+      admins: group.members.filter(m => m.isAdmin).map((member) => member.user),
       memberCount: group.members.length,
     })),
   };
