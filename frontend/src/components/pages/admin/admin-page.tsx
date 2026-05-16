@@ -15,9 +15,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  List,
-  ListItem,
-  ListItemText,
   Divider,
   MenuItem,
   Stack,
@@ -39,14 +36,11 @@ import type {
   AdminLogsResponse,
   AdminOverview,
   AdminSuspiciousResponse,
-  LogActionTypeValue,
-  SuspiciousStatus,
 } from "@/lib/types";
 
 const ADMIN_ROLES = ["admin", "user"] as const;
 const ADMIN_TABS = ["management", "suspicious"] as const;
 type AdminTab = (typeof ADMIN_TABS)[number];
-
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-US", {
@@ -68,43 +62,6 @@ function formatOutcomeLabel(value: string) {
     .toLowerCase()
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
-
-function formatSuspiciousStatus(value: SuspiciousStatus) {
-  if (value === "underReview") {
-    return "Under review";
-  }
-
-  return value.charAt(0).toUpperCase() + value.slice(1);
-}
-
-function formatJsonPreview(value: unknown) {
-  if (value == null) {
-    return "-";
-  }
-
-  try {
-    const serialized = JSON.stringify(value);
-    if (!serialized) {
-      return "-";
-    }
-
-    return serialized.length > 120 ? `${serialized.slice(0, 117)}...` : serialized;
-  } catch {
-    return "-";
-  }
-}
-
-function emptyLogsFilters() {
-  return {
-    user: "",
-    actionType: "",
-    outcome: "",
-    from: "",
-    to: "",
-  };
-}
-
-type LogFiltersDraft = ReturnType<typeof emptyLogsFilters>;
 
 function AdminSectionTitle({ title, subtitle }: { title: string; subtitle: string }) {
   return (
@@ -323,8 +280,6 @@ function ManagementTab({
   );
 }
 
-// Logs view removed from main admin UI; per-user logs are available from Suspicious Users view.
-
 function SuspiciousTab({
   suspiciousUsers,
   loading,
@@ -393,13 +348,9 @@ function SuspiciousTab({
 
       <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", md: "repeat(2, minmax(0, 1fr))", xl: "repeat(3, minmax(0, 1fr))" } }}>
         {users.map((entry) => {
-          // Deduplicate observations: keep only the latest one per rule type
           const uniqueObservations = Array.from(
             new Map(
-              entry.observations.map((obs) => [
-                obs.ruleKey,
-                obs,
-              ])
+              entry.observations.map((obs) => [obs.ruleKey, obs])
             ).values()
           );
 
@@ -512,7 +463,6 @@ export function AdminPage() {
   const [savingRoleUserId, setSavingRoleUserId] = useState<number | null>(null);
   const [currentUsername, setCurrentUsername] = useState(DEFAULT_USERNAME);
   const [activeTab, setActiveTab] = useState<AdminTab>("management");
-  
 
   const isAdmin = role === "admin";
 
@@ -530,7 +480,6 @@ export function AdminPage() {
       setLoadingOverview(false);
     }
   }, [token]);
-
 
   const loadSuspicious = useCallback(async () => {
     try {
@@ -582,8 +531,6 @@ export function AdminPage() {
     window.addEventListener("splitmates:backend-update", handleBackendUpdate);
     return () => window.removeEventListener("splitmates:backend-update", handleBackendUpdate);
   }, [isAdmin, loadAdminData]);
-
-  // logs removed from main UI; per-user logs are fetched from SuspiciousTab when requested
 
   const handleDeleteUser = async (userId: number, username: string) => {
     if (!window.confirm(`Delete the account for ${username}? This will remove their user data and created groups.`)) {

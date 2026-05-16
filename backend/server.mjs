@@ -2,6 +2,7 @@ import http from "node:http";
 import next from "next";
 import { WebSocketServer, WebSocket } from "ws";
 import { initializeSocket } from "./src/lib/socket-manager.ts";
+import { prisma } from "./src/lib/prisma.ts";
 
 const isProduction = process.argv.includes("--production") || process.env.NODE_ENV === "production";
 const isDevelopment = process.argv.includes("--dev") || !isProduction;
@@ -12,6 +13,14 @@ const app = next({ dev: isDevelopment, hostname, port });
 const handle = app.getRequestHandler();
 
 await app.prepare();
+
+try {
+  await prisma.$queryRaw`SELECT 1`;
+  console.log("Database connection successful");
+} catch (error) {
+  console.error("Failed to connect to database:", error);
+  process.exit(1);
+}
 
 const server = http.createServer((request, response) => {
   void handle(request, response);

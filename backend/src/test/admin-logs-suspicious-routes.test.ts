@@ -7,7 +7,7 @@ beforeEach(() => {
 });
 
 describe("admin logs and suspicious routes", () => {
-  it("admin logs route handles auth, filters, and success", async () => {
+  it("admin logs route handles auth and success", async () => {
     const getCurrentUserFromRequest = vi.fn();
     const requirePermission = vi.fn();
     const getLogs = vi.fn();
@@ -54,9 +54,7 @@ describe("admin logs and suspicious routes", () => {
     });
 
     const ok = await mod.GET(
-      new Request(
-        "http://localhost/api/admin/logs?userId=7&user=ana&actionType=AUTH_LOGIN_SUCCESS&outcome=success&from=2026-05-01T00:00:00.000Z&to=2026-05-07T00:00:00.000Z&page=1&pageSize=50",
-      ),
+      new Request("http://localhost/api/admin/logs?userId=7&page=1&pageSize=50"),
     );
     expect(ok.status).toBe(200);
     const payload = await ok.json();
@@ -70,17 +68,12 @@ describe("admin logs and suspicious routes", () => {
       }),
     ]);
     expect(getLogs).toHaveBeenCalledWith(
-      expect.objectContaining({
-        userId: 7,
-        user: "ana",
-        actionType: "AUTH_LOGIN_SUCCESS",
-        outcome: LogOutcome.success,
-      }),
+      { userId: 7 },
       expect.objectContaining({ page: 1, pageSize: 50 }),
     );
   });
 
-  it("admin logs route rejects invalid filters and permission errors", async () => {
+  it("admin logs route rejects missing/invalid userId and permission errors", async () => {
     const getCurrentUserFromRequest = vi.fn();
     const requirePermission = vi.fn();
     const getLogs = vi.fn();
@@ -103,18 +96,13 @@ describe("admin logs and suspicious routes", () => {
 
     getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
     requirePermission.mockResolvedValueOnce(undefined);
+    const missingUserId = await mod.GET(new Request("http://localhost/api/admin/logs"));
+    expect(missingUserId.status).toBe(400);
+
+    getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
+    requirePermission.mockResolvedValueOnce(undefined);
     const invalidUserId = await mod.GET(new Request("http://localhost/api/admin/logs?userId=abc"));
     expect(invalidUserId.status).toBe(400);
-
-    getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
-    requirePermission.mockResolvedValueOnce(undefined);
-    const invalidOutcome = await mod.GET(new Request("http://localhost/api/admin/logs?userId=7&outcome=bad"));
-    expect(invalidOutcome.status).toBe(400);
-
-    getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
-    requirePermission.mockResolvedValueOnce(undefined);
-    const invalidDate = await mod.GET(new Request("http://localhost/api/admin/logs?userId=7&from=bad-date"));
-    expect(invalidDate.status).toBe(400);
   });
 
   it("admin suspicious routes handle auth, list, and patch states", async () => {
@@ -243,5 +231,80 @@ describe("admin logs and suspicious routes", () => {
       { params: Promise.resolve({ userId: "7" }) },
     );
     expect(underReview.status).toBe(200);
+  });
+
+  it("delete group admin route handles auth, permissions, validation, not-found and success", async () => {
+    const getCurrentUserFromRequest = vi.fn();
+    const requirePermission = vi.fn();
+    const logHttpAction = vi.fn();
+
+    const prisma = {
+      group: { findUnique: vi.fn() },
+      groupMember: { findUnique: vi.fn(), update: vi.fn() },
+    } as any;
+
+    vi.doMock("@/lib/splitmates", () => ({ getCurrentUserFromRequest }));
+    vi.doMock("@/lib/splitmates/services/auth/permissions-service", () => ({ requirePermission }));
+    vi.doMock("@/lib/splitmates/api/http-action-log", () => ({ logHttpAction }));
+    vi.doMock("@/lib/prisma", () => ({ prisma }));
+
+    const mod = await import("@/app/api/admin/groups/[groupId]/admins/[userId]/route");
+
+    getCurrentUserFromRequest.mockResolvedValueOnce(null);
+    const noAuth = await mod.DELETE(new Request("http://localhost/api/admin/groups/1/admins/2", { method: "DELETE" }), {
+      params: Promise.resolve({ groupId: "1", userId: "2" }),
+    });
+    expect(noAuth.status).toBe(401);
+
+    getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
+    requirePermission.mockRejectedValueOnce(Object.assign(new Error("Nope"), { status: 403 }));
+    const forbidden = await mod.DELETE(new Request("http://localhost/api/admin/groups/1/admins/2", { method: "DELETE" }), {
+      params: Promise.resolve({ groupId: "1", userId: "2" }),
+    });
+    expect(forbidden.status).toBe(403);
+
+    getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
+    requirePermission.mockResolvedValueOnce(undefined);
+    const invalid = await mod.DELETE(new Request("http://localhost/api/admin/groups/x/admins/2", { method: "DELETE" }), {
+      params: Promise.resolve({ groupId: "x", userId: "2" }),
+    });
+    expect(invalid.status).toBe(400);
+
+    getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
+    requirePermission.mockResolvedValueOnce(undefined);
+    prisma.group.findUnique.mockResolvedValueOnce(null);
+    const missingGroup = await mod.DELETE(new Request("http://localhost/api/admin/groups/7/admins/2", { method: "DELETE" }), {
+      params: Promise.resolve({ groupId: "7", userId: "2" }),
+    });
+    expect(missingGroup.status).toBe(404);
+
+    getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
+    requirePermission.mockResolvedValueOnce(undefined);
+    prisma.group.findUnique.mockResolvedValueOnce({ id: 7, name: "My Group" });
+    prisma.groupMember.findUnique.mockResolvedValueOnce(null);
+    const missingMember = await mod.DELETE(new Request("http://localhost/api/admin/groups/7/admins/2", { method: "DELETE" }), {
+      params: Promise.resolve({ groupId: "7", userId: "2" }),
+    });
+    expect(missingMember.status).toBe(404);
+
+    getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
+    requirePermission.mockResolvedValueOnce(undefined);
+    prisma.group.findUnique.mockResolvedValueOnce({ id: 7, name: "My Group" });
+    prisma.groupMember.findUnique.mockResolvedValueOnce({ groupId: 7, userId: 2, isAdmin: true });
+    prisma.groupMember.update.mockResolvedValueOnce({ groupId: 7, userId: 2, isAdmin: false });
+    const ok = await mod.DELETE(new Request("http://localhost/api/admin/groups/7/admins/2", { method: "DELETE" }), {
+      params: Promise.resolve({ groupId: "7", userId: "2" }),
+    });
+    expect(ok.status).toBe(200);
+
+    getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
+    requirePermission.mockResolvedValueOnce(undefined);
+    prisma.group.findUnique.mockResolvedValueOnce({ id: 7, name: "My Group" });
+    prisma.groupMember.findUnique.mockResolvedValueOnce({ groupId: 7, userId: 2, isAdmin: true });
+    prisma.groupMember.update.mockRejectedValueOnce("boom");
+    const nonError = await mod.DELETE(new Request("http://localhost/api/admin/groups/7/admins/2", { method: "DELETE" }), {
+      params: Promise.resolve({ groupId: "7", userId: "2" }),
+    });
+    expect(nonError.status).toBe(400);
   });
 });

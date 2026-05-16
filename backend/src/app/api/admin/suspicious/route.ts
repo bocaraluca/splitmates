@@ -12,7 +12,7 @@ function serializeSuspiciousUser(entry: Awaited<ReturnType<typeof loadSuspicious
   return {
     userId: entry.userId,
     reason: entry.reason,
-    flaggedAt: entry.lastSeen.toISOString(),
+    flaggedAt: entry.lastSeen instanceof Date ? entry.lastSeen.toISOString() : new Date(entry.lastSeen).toISOString(),
     user: {
       username: entry.user.username,
       email: entry.user.email,
@@ -20,7 +20,7 @@ function serializeSuspiciousUser(entry: Awaited<ReturnType<typeof loadSuspicious
     observations: entry.observations.map((obs) => ({
       ruleKey: obs.rule?.key ?? "unknown",
       note: obs.note,
-      createdAt: obs.createdAt.toISOString(),
+      createdAt: obs.createdAt instanceof Date ? obs.createdAt.toISOString() : new Date(obs.createdAt).toISOString(),
     })),
   };
 }

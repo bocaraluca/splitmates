@@ -75,7 +75,6 @@ function pickRandomSubset<T>(items: T[], minSize = 2): T[] {
 
 async function deleteAllData() {
   await prisma.session.deleteMany({});
-  await prisma.alert.deleteMany({});
   await prisma.observation.deleteMany({});
   await prisma.suspiciousUser.deleteMany({});
   await prisma.detectionRule.deleteMany({});

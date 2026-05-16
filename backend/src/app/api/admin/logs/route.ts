@@ -3,7 +3,6 @@ import { getCurrentUserFromRequest } from "@/lib/splitmates";
 import { requirePermission } from "@/lib/splitmates/services/auth/permissions-service";
 import { logHttpAction } from "@/lib/splitmates/api/http-action-log";
 import { ACTION_TYPES } from "@/lib/splitmates/logging/action-types";
-import type { ActionType } from "@/lib/splitmates/logging/action-types";
 import { getLogs, LogOutcome } from "@/lib/splitmates/services/logging-service";
 
 export const runtime = "nodejs";
@@ -26,23 +25,6 @@ function serializeLog(log: Awaited<ReturnType<typeof getLogs>>["items"][number])
   };
 }
 
-function parseOutcome(value: string | null) {
-  if (!value) {
-    return undefined;
-  }
-
-  return Object.values(LogOutcome).includes(value as LogOutcome) ? (value as LogOutcome) : null;
-}
-
-function parseActionType(value: string | null): ActionType | undefined | null {
-  if (!value) {
-    return undefined;
-  }
-
-  const allowed = Object.values(ACTION_TYPES);
-  return allowed.includes(value as ActionType) ? (value as ActionType) : null;
-}
-
 export async function GET(request: Request) {
   try {
     const actor = await getCurrentUserFromRequest(request);
@@ -55,75 +37,33 @@ export async function GET(request: Request) {
       return jsonError("You must be logged in to view logs.", 401);
     }
 
+    try {
+      await requirePermission(actor.id, "View all users");
+    } catch (permissionError) {
+      await logHttpAction({
+        request,
+        actionType: ACTION_TYPES.ADMIN_LOGS_GET_FORBIDDEN,
+        outcome: LogOutcome.forbidden,
+      });
+      throw permissionError;
+    }
+
     const url = new URL(request.url);
     const userIdParam = url.searchParams.get("userId");
-    const userParam = url.searchParams.get("user");
-
-    // If requesting global logs require explicit permission; if requesting logs for a specific user
-    // allow admins with "View all users" permission to fetch per-user logs from the suspicious users UI.
-    if (!userIdParam) {
-      try {
-        await requirePermission(actor.id, "View all logs");
-      } catch (permissionError) {
-        await logHttpAction({
-          request,
-          actionType: ACTION_TYPES.ADMIN_LOGS_GET_FORBIDDEN,
-          outcome: LogOutcome.forbidden,
-        });
-        throw permissionError;
-      }
-    } else {
-      try {
-        await requirePermission(actor.id, "View all users");
-      } catch (permissionError) {
-        await logHttpAction({
-          request,
-          actionType: ACTION_TYPES.ADMIN_LOGS_GET_FORBIDDEN,
-          outcome: LogOutcome.forbidden,
-        });
-        throw permissionError;
-      }
-    }
-    const actionTypeParam = url.searchParams.get("actionType");
-    const outcomeParam = url.searchParams.get("outcome");
-    const fromParam = url.searchParams.get("from");
-    const toParam = url.searchParams.get("to");
     const pageParam = Number.parseInt(url.searchParams.get("page") ?? "1", 10);
     const pageSizeParam = Number.parseInt(url.searchParams.get("pageSize") ?? "50", 10);
 
-    let userId: number | undefined;
-    if (userIdParam) {
-      userId = Number.parseInt(userIdParam, 10);
-      if (!Number.isInteger(userId) || userId <= 0) {
-        return jsonError("Invalid userId.", 400);
-      }
+    if (!userIdParam) {
+      return jsonError("userId is required.", 400);
     }
 
-    const actionType = parseActionType(actionTypeParam);
-    if (actionTypeParam && actionType === null) {
-      return jsonError("Invalid actionType.", 400);
-    }
-
-    const outcome = parseOutcome(outcomeParam);
-    if (outcomeParam && outcome === null) {
-      return jsonError("Invalid outcome.", 400);
-    }
-
-    const from = fromParam ? new Date(fromParam) : undefined;
-    const to = toParam ? new Date(toParam) : undefined;
-    if ((fromParam && Number.isNaN(from?.getTime())) || (toParam && Number.isNaN(to?.getTime()))) {
-      return jsonError("Invalid date range.", 400);
+    const userId = Number.parseInt(userIdParam, 10);
+    if (!Number.isInteger(userId) || userId <= 0) {
+      return jsonError("Invalid userId.", 400);
     }
 
     const result = await getLogs(
-      {
-        userId,
-        user: userParam ?? undefined,
-        actionType: actionType === null ? undefined : actionType,
-        outcome: outcome === null ? undefined : outcome,
-        from,
-        to,
-      },
+      { userId },
       {
         page: Number.isInteger(pageParam) && pageParam > 0 ? pageParam : 1,
         pageSize: Number.isInteger(pageSizeParam) && pageSizeParam > 0 ? pageSizeParam : 50,
@@ -134,15 +74,7 @@ export async function GET(request: Request) {
       request,
       actionType: ACTION_TYPES.ADMIN_LOGS_GET,
       outcome: LogOutcome.success,
-      actionJson: {
-        userId,
-        user: userParam ?? null,
-        actionType,
-        outcome,
-        from: from?.toISOString() ?? null,
-        to: to?.toISOString() ?? null,
-        total: result.total,
-      },
+      actionJson: { userId, total: result.total },
     });
 
     return jsonOk({

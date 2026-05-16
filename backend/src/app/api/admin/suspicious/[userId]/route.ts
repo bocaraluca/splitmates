@@ -61,6 +61,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ userI
             userId,
             status: status as "underReview",
             reason: null,
+            lastSeen: new Date(),
           },
           update: {
             status: status as "underReview",
