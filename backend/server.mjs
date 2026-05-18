@@ -1,4 +1,5 @@
-import http from "node:http";
+import fs from "node:fs";
+import https from "node:https";
 import next from "next";
 import { WebSocketServer, WebSocket } from "ws";
 import { initializeSocket } from "./src/lib/socket-manager.ts";
@@ -22,7 +23,12 @@ try {
   process.exit(1);
 }
 
-const server = http.createServer((request, response) => {
+const httpsOptions = {
+  key: fs.readFileSync("./certs/key.pem"),
+  cert: fs.readFileSync("./certs/cert.pem"),
+};
+
+const server = https.createServer(httpsOptions, (request, response) => {
   void handle(request, response);
 });
 
@@ -48,7 +54,7 @@ globalThis.__splitmatesBroadcastWebSocket = (payload) => {
 };
 
 server.on("upgrade", (request, socket, head) => {
-  const url = new URL(request.url ?? "/", `http://${request.headers.host ?? `${hostname}:${port}`}`);
+  const url = new URL(request.url ?? "/", `https://${request.headers.host ?? `${hostname}:${port}`}`);
   if (url.pathname !== "/ws") {
     return;
   }
@@ -66,6 +72,6 @@ websocketServer.on("connection", (websocket) => {
 });
 
 server.listen(port, hostname, () => {
-  console.log(`SplitMates backend ready at http://${hostname}:${port} (${isDevelopment ? "dev" : "prod"})`);
+  console.log(`SplitMates backend ready at https://${hostname}:${port} (${isDevelopment ? "dev" : "prod"})`);
   console.log(`WebSocket ready for real-time chat on port ${port}`);
 });

@@ -3,6 +3,7 @@ import { GET } from "@/app/api/events/route";
 
 const deps = vi.hoisted(() => ({
   subscribeToEvents: vi.fn(),
+  getCurrentUserFromRequest: vi.fn().mockResolvedValue({ id: 1 }),
 }));
 
 vi.mock("@/lib/splitmates", () => deps);

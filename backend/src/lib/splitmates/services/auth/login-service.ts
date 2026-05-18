@@ -31,7 +31,7 @@ export async function loginUser(input: LoginInput): Promise<LoginResponse> {
     },
   });
 
-  if (!user || !bcrypt.compareSync(input.password, user.passwordHash)) {
+  if (!user || !user.passwordHash || !bcrypt.compareSync(input.password, user.passwordHash)) {
     const error = new Error("Invalid login credentials.") as Error & { userId?: number };
     error.userId = user?.id;
     throw error;

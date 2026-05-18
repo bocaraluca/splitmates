@@ -14,6 +14,16 @@ import { LogOutcome } from "@/lib/splitmates/services/logging-service";
 export const runtime = "nodejs";
 
 export async function GET(request: Request, context: { params: Promise<{ groupId: string; expenseId: string }> }) {
+  const viewer = await getCurrentUserFromRequest(request);
+  if (!viewer) {
+    void logHttpAction({
+      request,
+      actionType: ACTION_TYPES.GROUP_EXPENSES_DETAIL_GET_UNAUTHORIZED,
+      outcome: LogOutcome.failed,
+    });
+    return jsonError("Unauthorized to perform this action.", 401);
+  }
+
   const params = await context.params;
   const groupId = Number(params.groupId);
   const expenseId = Number(params.expenseId);
@@ -40,8 +50,7 @@ export async function GET(request: Request, context: { params: Promise<{ groupId
     return jsonError("Group not found.", 404);
   }
 
-  const viewer = await getCurrentUserFromRequest(request);
-  const expense = await getExpenseDetailForGroup(groupId, expenseId, viewer?.id);
+  const expense = await getExpenseDetailForGroup(groupId, expenseId, viewer.id);
   if (!expense) {
     void logHttpAction({
       request,

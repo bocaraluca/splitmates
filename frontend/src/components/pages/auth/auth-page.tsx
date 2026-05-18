@@ -173,7 +173,11 @@ export function AuthPage({ mode }: { mode: "login" | "signup" }) {
                 <TextField name="confirmPassword" type="password" placeholder="confirm password" fullWidth size="small" sx={fieldSx} />
               </>
             ) : (
-              <Box sx={{ height: 8 }} />
+              <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+                <Link href="/forgot-password" style={{ color: "#7f76d5", fontWeight: 700, fontSize: 13, textDecoration: "none" }}>
+                  Forgot password?
+                </Link>
+              </Box>
             )}
 
             <Button
@@ -195,6 +199,51 @@ export function AuthPage({ mode }: { mode: "login" | "signup" }) {
               }}
             >
               {copy.action}
+            </Button>
+          </Box>
+
+          <Box sx={{ mt: 2, display: "grid", gap: 1.2 }}>
+            <Typography sx={{ textAlign: "center", color: "#6f727a", fontSize: 13 }}>or</Typography>
+            <Button
+              component={Link}
+              href="/magic-link"
+              variant="contained"
+              sx={{
+                py: 0.85,
+                borderRadius: 1.5,
+                fontSize: { xs: 15, md: 17 },
+                fontWeight: 800,
+                textTransform: "none",
+                background: "#7f76d5",
+                boxShadow: "0 8px 20px rgba(127, 118, 213, 0.3)",
+                width: "100%",
+                maxWidth: 360,
+                justifySelf: "center",
+                "&:hover": { background: "#6e65c4" },
+              }}
+            >
+              ✉ {mode === "login" ? "Log in" : "Sign up"} using email link
+            </Button>
+            <Button
+              component="a"
+              href="/api/auth/google"
+              variant="contained"
+              sx={{
+                py: 0.85,
+                borderRadius: 1.5,
+                fontSize: { xs: 15, md: 17 },
+                fontWeight: 800,
+                textTransform: "none",
+                background: "#4285f4",
+                boxShadow: "0 8px 20px rgba(66, 133, 244, 0.3)",
+                width: "100%",
+                maxWidth: 360,
+                justifySelf: "center",
+                "&:hover": { background: "#3574e2" },
+              }}
+            >
+              <Box component="span" sx={{ mr: 1, fontFamily: "Arial, sans-serif", fontWeight: 700, fontSize: 18, color: "white", lineHeight: 1 }}>G</Box>
+              {mode === "login" ? "Log in" : "Sign up"} with Google
             </Button>
           </Box>
 

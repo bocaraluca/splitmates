@@ -1,5 +1,5 @@
 import { jsonError, jsonOk } from "@/lib/splitmates/api/http";
-import { stopGenerator } from "@/lib/splitmates";
+import { stopGenerator, getCurrentUserFromRequest } from "@/lib/splitmates";
 import { logHttpAction } from "@/lib/splitmates/api/http-action-log";
 import ACTION_TYPES from "@/lib/splitmates/logging/action-types";
 import { LogOutcome } from "@/lib/splitmates/services/logging-service";
@@ -7,6 +7,17 @@ import { LogOutcome } from "@/lib/splitmates/services/logging-service";
 export const runtime = "nodejs";
 
 export async function POST(request: Request = new Request("http://localhost/api/generator/stop")) {
+  const currentUser = await getCurrentUserFromRequest(request);
+
+  if (!currentUser) {
+    void logHttpAction({
+      request,
+      actionType: ACTION_TYPES.GENERATOR_STOP_UNAUTHORIZED,
+      outcome: LogOutcome.failed,
+    });
+    return jsonError("Unauthorized to perform this action.", 401);
+  }
+
   try {
     const status = stopGenerator();
 

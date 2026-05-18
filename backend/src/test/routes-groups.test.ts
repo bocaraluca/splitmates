@@ -148,13 +148,16 @@ describe("groups routes", () => {
     const listMod = await import("@/app/api/groups/[groupId]/expenses/route");
     const detailMod = await import("@/app/api/groups/[groupId]/expenses/[expenseId]/route");
 
+    deps.getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
     const invalidList = await listMod.GET(new Request("http://localhost?x=1"), { params: Promise.resolve({ groupId: "x" }) });
     expect(invalidList.status).toBe(400);
 
+    deps.getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
     deps.getGroupById.mockResolvedValueOnce(null);
     const missingGroup = await listMod.GET(new Request("http://localhost?page=1&pageSize=5"), { params: Promise.resolve({ groupId: "1" }) });
     expect(missingGroup.status).toBe(404);
 
+    deps.getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
     deps.getGroupById.mockResolvedValueOnce({ id: 1 });
     deps.getExpenses.mockResolvedValueOnce({ items: [], page: 1, pageSize: 5, totalItems: 0, totalPages: 1 });
     const okList = await listMod.GET(new Request("http://localhost?page=1&pageSize=5"), { params: Promise.resolve({ groupId: "1" }) });
@@ -173,9 +176,11 @@ describe("groups routes", () => {
     }), { params: Promise.resolve({ groupId: "1" }) });
     expect(okCreate.status).toBe(201);
 
+    deps.getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
     const invalidDetail = await detailMod.GET(new Request("http://localhost"), { params: Promise.resolve({ groupId: "x", expenseId: "y" }) });
     expect(invalidDetail.status).toBe(400);
 
+    deps.getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
     deps.getGroupById.mockResolvedValueOnce(null);
     const missingGroupDetail = await detailMod.GET(new Request("http://localhost"), { params: Promise.resolve({ groupId: "1", expenseId: "2" }) });
     expect(missingGroupDetail.status).toBe(404);
@@ -330,13 +335,16 @@ describe("groups routes", () => {
     }), { params: Promise.resolve({ groupId: "1" }) });
     expect(del200NullGroup.status).toBe(200);
 
+    deps.getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
     const payInvalid = await paymentsMod.GET(new Request("http://localhost"), { params: Promise.resolve({ groupId: "x" }) });
     expect(payInvalid.status).toBe(400);
 
+    deps.getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
     deps.getGroupById.mockResolvedValueOnce(null);
     const pay404 = await paymentsMod.GET(new Request("http://localhost"), { params: Promise.resolve({ groupId: "1" }) });
     expect(pay404.status).toBe(404);
 
+    deps.getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
     deps.getGroupById.mockResolvedValueOnce({ id: 1 });
     deps.getPayments.mockResolvedValueOnce([]);
     const pay200 = await paymentsMod.GET(new Request("http://localhost"), { params: Promise.resolve({ groupId: "1" }) });
@@ -355,13 +363,16 @@ describe("groups routes", () => {
     }), { params: Promise.resolve({ groupId: "1" }) });
     expect(payCreate.status).toBe(201);
 
+    deps.getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
     const statsInvalid = await statsMod.GET(new Request("http://localhost"), { params: Promise.resolve({ groupId: "x" }) });
     expect(statsInvalid.status).toBe(400);
 
+    deps.getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
     deps.getGroupById.mockResolvedValueOnce(null);
     const stats404 = await statsMod.GET(new Request("http://localhost"), { params: Promise.resolve({ groupId: "1" }) });
     expect(stats404.status).toBe(404);
 
+    deps.getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
     deps.getGroupById.mockResolvedValueOnce({ id: 1 });
     deps.getGroupStats.mockResolvedValueOnce({ totalSpent: 10 });
     const stats200 = await statsMod.GET(new Request("http://localhost"), { params: Promise.resolve({ groupId: "1" }) });
@@ -427,8 +438,10 @@ describe("groups routes", () => {
     deps.deleteGroup.mockRejectedValueOnce({ status: 409 });
     expect((await groupMod.DELETE(new Request("http://localhost"), { params: Promise.resolve({ groupId: "1" }) })).status).toBe(409);
 
+    deps.getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
     deps.getGroupById.mockResolvedValueOnce({ id: 1 });
     expect((await expListMod.GET(new Request("http://localhost?page=invalid"), { params: Promise.resolve({ groupId: "1" }) })).status).toBe(400);
+    deps.getCurrentUserFromRequest.mockResolvedValueOnce({ id: 1 });
     deps.getGroupById.mockResolvedValueOnce({ id: 1 });
     deps.getExpenses.mockRejectedValueOnce(new Error("err"));
     expect((await expListMod.GET(new Request("http://localhost?page=1&pageSize=5"), { params: Promise.resolve({ groupId: "1" }) })).status).toBe(500);

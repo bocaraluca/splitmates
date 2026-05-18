@@ -118,3 +118,18 @@ export const generatorSchema = z.object({
   groupId: idSchema.optional(),
 });
 
+export const forgotPasswordSchema = z.object({
+  email: z.string().trim().email("Enter a valid email address."),
+});
+
+export const resetPasswordSchema = z
+  .object({
+    token: z.string().min(1, "Token is required."),
+    password: z.string().min(6, "Password must be at least 6 characters.").max(100, "Password must be 100 characters or fewer."),
+    confirmPassword: z.string().min(6, "Confirm your password."),
+  })
+  .refine((value) => value.password === value.confirmPassword, {
+    message: "Passwords do not match.",
+    path: ["confirmPassword"],
+  });
+

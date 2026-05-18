@@ -1,6 +1,6 @@
 export type Id = number;
 
-export const GROUP_CATEGORIES = ["household", "trip", "friends", "roommates", "other"] as const;
+export const GROUP_CATEGORIES = ["household", "trip", "friends", "family", "roommates", "other"] as const;
 export const EXPENSE_CATEGORIES = ["rent", "groceries", "utilities", "transport", "entertainment", "food", "other"] as const;
 export const SPLIT_TYPES = ["equal", "custom"] as const;
 
@@ -107,17 +107,6 @@ export interface ExpenseDetail {
   payer: User | null;
   shares: Array<ExpenseShare & { user: User | null; percent: number }>;
   yourShare: number;
-}
-
-export interface Settlement {
-  id: Id;
-  groupId: Id;
-  fromUserId: Id;
-  toUserId: Id;
-  amount: number;
-  note?: string;
-  date: string;
-  createdAt: string;
 }
 
 export interface CategoryStat {

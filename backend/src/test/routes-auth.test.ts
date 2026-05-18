@@ -142,6 +142,7 @@ describe("auth and misc routes", () => {
       getGeneratorStatus,
       stopGenerator,
       getHealthSnapshot,
+      getCurrentUserFromRequest: vi.fn().mockResolvedValue({ id: 1 }),
     }));
 
     const startMod = await import("@/app/api/generator/start/route");
@@ -193,7 +194,7 @@ describe("auth and misc routes", () => {
       return () => {};
     });
 
-    vi.doMock("@/lib/splitmates", () => ({ subscribeToEvents }));
+    vi.doMock("@/lib/splitmates", () => ({ subscribeToEvents, getCurrentUserFromRequest: vi.fn().mockResolvedValue({ id: 1 }) }));
 
     const mod = await import("@/app/api/events/route");
     const res = await mod.GET();
