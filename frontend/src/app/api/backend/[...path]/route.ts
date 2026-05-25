@@ -27,6 +27,7 @@ async function forwardRequest(request: NextRequest, pathSegments: string[]) {
     const responseHeaders = new Headers(response.headers);
     responseHeaders.delete("content-encoding");
     responseHeaders.delete("transfer-encoding");
+    responseHeaders.delete("content-length");
 
     return new Response(response.body, {
       status: response.status,
