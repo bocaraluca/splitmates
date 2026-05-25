@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import https from "node:https";
+import http from "node:http";
 import next from "next";
 import { WebSocketServer, WebSocket } from "ws";
 import { initializeSocket } from "./src/lib/socket-manager.ts";
@@ -8,7 +9,7 @@ import { prisma } from "./src/lib/prisma.ts";
 const isProduction = process.argv.includes("--production") || process.env.NODE_ENV === "production";
 const isDevelopment = process.argv.includes("--dev") || !isProduction;
 const hostname = process.env.HOST ?? "0.0.0.0";
-const port = 4000;
+const port = process.env.PORT ? parseInt(process.env.PORT) : 4000;
 
 const app = next({ dev: isDevelopment, hostname, port });
 const handle = app.getRequestHandler();
@@ -23,14 +24,20 @@ try {
   process.exit(1);
 }
 
-const httpsOptions = {
-  key: fs.readFileSync("./certs/key.pem"),
-  cert: fs.readFileSync("./certs/cert.pem"),
-};
-
-const server = https.createServer(httpsOptions, (request, response) => {
-  void handle(request, response);
-});
+let server;
+if (isProduction) {
+  server = http.createServer((request, response) => {
+    void handle(request, response);
+  });
+} else {
+  const httpsOptions = {
+    key: fs.readFileSync("./certs/key.pem"),
+    cert: fs.readFileSync("./certs/cert.pem"),
+  };
+  server = https.createServer(httpsOptions, (request, response) => {
+    void handle(request, response);
+  });
+}
 
 try {
   await initializeSocket(server);
@@ -72,6 +79,7 @@ websocketServer.on("connection", (websocket) => {
 });
 
 server.listen(port, hostname, () => {
-  console.log(`SplitMates backend ready at https://${hostname}:${port} (${isDevelopment ? "dev" : "prod"})`);
+  const protocol = isProduction ? "http" : "https";
+  console.log(`SplitMates backend ready at ${protocol}://${hostname}:${port} (${isDevelopment ? "dev" : "prod"})`);
   console.log(`WebSocket ready for real-time chat on port ${port}`);
 });
