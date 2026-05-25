@@ -24,9 +24,13 @@ async function forwardRequest(request: NextRequest, pathSegments: string[]) {
       body,
     });
 
+    const responseHeaders = new Headers(response.headers);
+    responseHeaders.delete("content-encoding");
+    responseHeaders.delete("transfer-encoding");
+
     return new Response(response.body, {
       status: response.status,
-      headers: response.headers,
+      headers: responseHeaders,
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown upstream error";

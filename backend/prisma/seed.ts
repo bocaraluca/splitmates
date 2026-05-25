@@ -228,7 +228,7 @@ async function main() {
   const passwordHash = bcrypt.hashSync(PASSWORD, 10);
 
   const raluca = await prisma.user.create({
-    data: { username: "raluca", email: "raluca@gmail.com", passwordHash, roleId: adminRole.id },
+    data: { username: "raluca", email: "ralucaboca06@gmail.com", passwordHash, roleId: adminRole.id },
   });
   const ana = await prisma.user.create({
     data: { username: "ana", email: "ana@gmail.com", passwordHash, roleId: userRole.id },
