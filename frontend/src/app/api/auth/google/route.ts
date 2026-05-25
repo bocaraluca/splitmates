@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 
-export async function GET(request: NextRequest) {
-  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? "localhost:3000";
-  const hostname = host.split(":")[0];
-  return Response.redirect(`https://${hostname}:4000/api/auth/google`, 302);
+const BACKEND_BASE_URL = process.env.BACKEND_API_URL ?? "http://localhost:4000";
+
+export async function GET(_request: NextRequest) {
+  return Response.redirect(`${BACKEND_BASE_URL}/api/auth/google`, 302);
 }
