@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node server.mjs --dev",
+    "dev": "node --max-old-space-size=4096 server.mjs --dev",
     "build": "next build",
     "start": "node server.mjs --production",
     "lint": "eslint",

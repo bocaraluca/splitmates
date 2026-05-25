@@ -36,10 +36,11 @@ import type {
   AdminLogsResponse,
   AdminOverview,
   AdminSuspiciousResponse,
+  AppStatsResult,
 } from "@/lib/types";
 
 const ADMIN_ROLES = ["admin", "user"] as const;
-const ADMIN_TABS = ["management", "suspicious"] as const;
+const ADMIN_TABS = ["management", "suspicious", "performance"] as const;
 type AdminTab = (typeof ADMIN_TABS)[number];
 
 function formatDate(value: string) {
@@ -399,7 +400,7 @@ function SuspiciousTab({
                     Clear
                   </Button>
                   <Button size="small" color="error" variant="outlined" startIcon={<DeleteOutlineRoundedIcon />} onClick={() => onDeleteUser(entry.userId, entry.user.username)} disabled={loading}>
-                    Delete
+                    Delete user account
                   </Button>
                 </Stack>
               </CardContent>
@@ -446,6 +447,191 @@ function SuspiciousTab({
           <Button onClick={closeViewLogs}>Close</Button>
         </DialogActions>
       </Dialog>
+    </Stack>
+  );
+}
+
+function StatCard({ label, value, unit }: { label: string; value: string | number; unit?: string }) {
+  return (
+    <Box sx={{ p: 2, borderRadius: 1.5, bgcolor: "rgba(247,251,255,0.95)", border: "1px solid rgba(34,58,90,0.10)", minWidth: 130, flex: 1 }}>
+      <Typography variant="caption" sx={{ color: "text.secondary", textTransform: "uppercase", letterSpacing: "0.1em" }}>{label}</Typography>
+      <Typography sx={{ fontWeight: 900, fontSize: 22, lineHeight: 1.2, mt: 0.5 }}>
+        {value}{unit ? <Typography component="span" sx={{ fontSize: 13, fontWeight: 400, color: "text.secondary", ml: 0.5 }}>{unit}</Typography> : null}
+      </Typography>
+    </Box>
+  );
+}
+
+function ResultPanel({ result, title }: { result: AppStatsResult; title: string }) {
+  const modeColor: Record<string, string> = {
+    "no-cache": "#d32f2f",
+    optimized: "#1976d2",
+    cache: "#388e3c",
+  };
+
+  const modeLabel: Record<string, string> = {
+    "no-cache": "No cache",
+    optimized: "Optimized",
+    cache: "Cache hit",
+  };
+
+  return (
+    <Card sx={{ borderRadius: 2, background: "rgba(255,255,255,0.94)", flex: 1, minWidth: 0 }}>
+      <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+        <Stack direction="row" spacing={1} sx={{ alignItems: "center", mb: 2 }}>
+          <Typography variant="h6" sx={{ fontWeight: 800, flexGrow: 1 }}>{title}</Typography>
+          <Chip
+            label={modeLabel[result.mode] ?? result.mode}
+            size="small"
+            sx={{ bgcolor: modeColor[result.mode] ?? "#555", color: "#fff", fontWeight: 700 }}
+          />
+        </Stack>
+
+        <Stack direction="row" spacing={1.5} sx={{ flexWrap: "wrap", gap: 1.5, mb: 2 }}>
+          <StatCard label="Duration" value={result.durationMs} unit="ms" />
+          <StatCard label="Expenses" value={result.totalExpenses.toLocaleString()} />
+          <StatCard label="Participants" value={result.totalParticipants.toLocaleString()} />
+          <StatCard label="Payments" value={result.totalPayments.toLocaleString()} />
+          <StatCard label="Net debts" value={result.totalDebts.toLocaleString()} />
+        </Stack>
+
+        {result.debts.length > 0 && (
+          <Box>
+            <Typography variant="caption" sx={{ color: "text.secondary", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+              First 10 debts
+            </Typography>
+            <Box sx={{ overflowX: "auto", mt: 0.75 }}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>From user ID</TableCell>
+                    <TableCell>To user ID</TableCell>
+                    <TableCell align="right">Amount (RON)</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {result.debts.slice(0, 10).map((debt, idx) => (
+                    <TableRow key={idx} hover>
+                      <TableCell>{debt.fromUserId}</TableCell>
+                      <TableCell>{debt.toUserId}</TableCell>
+                      <TableCell align="right">{debt.amount.toFixed(2)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Box>
+          </Box>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function PerformanceTab({ token }: { token: string | null }) {
+  const [naiveResult, setNaiveResult] = useState<AppStatsResult | null>(null);
+  const [optimizedResult, setOptimizedResult] = useState<AppStatsResult | null>(null);
+  const [cachedResult, setCachedResult] = useState<AppStatsResult | null>(null);
+  const [loadingNaive, setLoadingNaive] = useState(false);
+  const [loadingOptimized, setLoadingOptimized] = useState(false);
+  const [loadingCached, setLoadingCached] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const auth = token ? { token } : {};
+
+  const runNaive = async () => {
+    setLoadingNaive(true);
+    setError(null);
+    try {
+      const result = await fetchFromBackend<AppStatsResult>("/admin/app-stats?optimized=false", auth);
+      setNaiveResult(result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to run naive query.");
+    } finally {
+      setLoadingNaive(false);
+    }
+  };
+
+  const runOptimized = async () => {
+    setLoadingOptimized(true);
+    setError(null);
+    try {
+      const result = await fetchFromBackend<AppStatsResult>("/admin/app-stats?optimized=true", auth);
+      setOptimizedResult(result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to run optimized query.");
+    } finally {
+      setLoadingOptimized(false);
+    }
+  };
+
+  const runCached = async () => {
+    setLoadingCached(true);
+    setError(null);
+    try {
+      const result = await fetchFromBackend<AppStatsResult>("/admin/app-stats?optimized=true", auth);
+      setCachedResult(result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to run cached query.");
+    } finally {
+      setLoadingCached(false);
+    }
+  };
+
+  const speedup =
+    naiveResult && optimizedResult && optimizedResult.durationMs > 0
+      ? (naiveResult.durationMs / optimizedResult.durationMs).toFixed(1)
+      : null;
+
+  return (
+    <Stack spacing={3}>
+      <AdminSectionTitle
+        title="Performance - app balances"
+        subtitle=""
+      />
+
+      {error ? <Alert severity="error">{error}</Alert> : null}
+
+
+      <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+        <Button
+          variant="contained"
+          color="error"
+          onClick={() => { void runNaive(); }}
+          disabled={loadingNaive}
+          sx={{ fontWeight: 700, minWidth: 200 }}
+        >
+          {loadingNaive ? "Running…" : "Run naive query"}
+        </Button>
+
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={() => { void runOptimized(); }}
+          disabled={loadingOptimized}
+          sx={{ fontWeight: 700, minWidth: 200 }}
+        >
+          {loadingOptimized ? "Running…" : "Run optimized query"}
+        </Button>
+
+        <Button
+          variant="outlined"
+          color="success"
+          onClick={() => { void runCached(); }}
+          disabled={loadingCached || !optimizedResult}
+          sx={{ fontWeight: 700, minWidth: 200 }}
+          title="Run the optimized query again to demonstrate the cache hit"
+        >
+          {loadingCached ? "Running…" : "Run again (cache hit)"}
+        </Button>
+      </Stack>
+
+
+      <Stack direction={{ xs: "column", lg: "row" }} spacing={2} sx={{ alignItems: "stretch" }}>
+        {naiveResult ? <ResultPanel result={naiveResult} title="Result" /> : null}
+        {optimizedResult ? <ResultPanel result={optimizedResult} title="Result" /> : null}
+        {cachedResult ? <ResultPanel result={cachedResult} title="Result" /> : null}
+      </Stack>
+
     </Stack>
   );
 }
@@ -669,6 +855,7 @@ export function AdminPage() {
               <Tabs value={activeTab} onChange={(_, value: AdminTab) => setActiveTab(value)} variant="scrollable" allowScrollButtonsMobile>
                 <Tab value="management" label="Management" />
                 <Tab value="suspicious" label="Suspicious Users" />
+                <Tab value="performance" label="Performance" />
               </Tabs>
             </CardContent>
           </Card>
@@ -710,6 +897,10 @@ export function AdminPage() {
                 void loadSuspicious();
               }}
             />
+          ) : null}
+
+          {activeTab === "performance" ? (
+            <PerformanceTab token={token} />
           ) : null}
         </Stack>
       </Container>

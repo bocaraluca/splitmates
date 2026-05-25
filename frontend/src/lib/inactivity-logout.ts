@@ -3,7 +3,7 @@ import { useRouter } from "next/navigation";
 import { getToken, logout } from "./auth-storage";
 import { fetchFromBackend } from "./backend-api";
 
-const INACTIVITY_TIMEOUT_MS = 2 * 60 * 1000; // 2 minutes
+const INACTIVITY_TIMEOUT_MS = 60 * 60 * 1000; // 60 minutes
 
 export function useInactivityLogout() {
     const router = useRouter();

@@ -420,3 +420,20 @@ export interface AdminSuspiciousUser {
 export interface AdminSuspiciousResponse {
   suspiciousUsers: AdminSuspiciousUser[];
 }
+
+export interface AppStatsDebt {
+  fromUserId: number;
+  toUserId: number;
+  amount: number;
+}
+
+export interface AppStatsResult {
+  mode: "no-cache" | "optimized" | "cache";
+  cacheHit: boolean;
+  durationMs: number;
+  totalExpenses: number;
+  totalParticipants: number;
+  totalPayments: number;
+  totalDebts: number;
+  debts: AppStatsDebt[];
+}

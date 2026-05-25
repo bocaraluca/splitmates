@@ -17,26 +17,19 @@ export async function getAdminOverview() {
           },
         },
       },
-      orderBy: {
-        createdAt: "desc",
-      },
+      orderBy: { createdAt: "desc" },
+      take: 100,
     }),
     prisma.group.findMany({
       include: {
+        _count: { select: { members: true } },
         members: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                username: true,
-              },
-            },
-          },
+          where: { isAdmin: true },
+          include: { user: { select: { id: true, username: true } } },
         },
       },
-      orderBy: {
-        createdAt: "desc",
-      },
+      orderBy: { createdAt: "desc" },
+      take: 100,
     }),
   ]);
 
@@ -57,8 +50,8 @@ export async function getAdminOverview() {
       description: group.description,
       category: group.category,
       createdAt: toIsoDate(group.createdAt),
-      admins: group.members.filter(m => m.isAdmin).map((member) => member.user),
-      memberCount: group.members.length,
+      admins: group.members.map((member) => member.user),
+      memberCount: group._count.members,
     })),
   };
 }

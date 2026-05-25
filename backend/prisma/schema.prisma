@@ -61,6 +61,7 @@ model GroupMember {
   groupId Int
   userId Int
   @@id([groupId, userId])
+  @@index([userId])
 
   joinedAt DateTime @default(now())
   isAdmin Boolean @default(false)
@@ -110,6 +111,7 @@ model ExpenseParticipant {
   expenseId Int
   userId Int
   @@id([expenseId, userId])
+  @@index([userId])
 
   amount Decimal @db.Decimal(10, 2)
 

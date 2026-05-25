@@ -282,6 +282,8 @@ export async function leaveGroup(groupId: number, userId: number): Promise<any |
 export async function getGroups(): Promise<any[]> {
   const groups = await prisma.group.findMany({
     include: { members: true },
+    orderBy: { createdAt: "desc" },
+    take: 50,
   });
 
   return Promise.all(groups.map((g) => formatGroupData(g, g.members)));
@@ -289,12 +291,10 @@ export async function getGroups(): Promise<any[]> {
 
 export async function getGroupsForUserId(userId: number): Promise<any[]> {
   const groups = await prisma.group.findMany({
-    where: {
-      members: {
-        some: { userId },
-      },
-    },
+    where: { members: { some: { userId } } },
     include: { members: true },
+    orderBy: { createdAt: "desc" },
+    take: 50,
   });
 
   return Promise.all(groups.map((g) => formatGroupData(g, g.members)));

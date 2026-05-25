@@ -3,6 +3,7 @@ import { jsonError, jsonOk } from "@/lib/splitmates/api/http";
 import { mapGroupForResponse } from "@/lib/splitmates/api/group-response";
 import { createGroup, getGroupsForUserId, getGroups, getCurrentUserFromRequest } from "@/lib/splitmates";
 import { getUserPermissions } from "@/lib/splitmates/services/auth/permissions-service";
+import { prisma } from "@/lib/prisma";
 import { logHttpAction } from "@/lib/splitmates/api/http-action-log";
 import ACTION_TYPES from "@/lib/splitmates/logging/action-types";
 import { LogOutcome } from "@/lib/splitmates/services/logging-service";
@@ -29,9 +30,28 @@ export async function GET(request: Request) {
     groupsRaw = await getGroupsForUserId(currentUser.id);
   }
 
-  const groups = await Promise.all(
-    groupsRaw.map((group: any) => mapGroupForResponse(group, currentUser.id)),
-  );
+  const allUserIds = [...new Set(groupsRaw.flatMap((g: any) => [...(g.memberIds ?? []), ...(g.adminIds ?? [])]))];
+  const allUsers = allUserIds.length > 0
+    ? await prisma.user.findMany({
+        where: { id: { in: allUserIds } },
+        select: { id: true, username: true, email: true, createdAt: true },
+      })
+    : [];
+  const usersById = new Map(allUsers.map((u) => [u.id, u]));
+
+  const groups = groupsRaw.map((group: any) => {
+    const toUser = (id: number) => {
+      const u = usersById.get(id);
+      return u ? { id: u.id, username: u.username, email: u.email, createdAt: u.createdAt.toISOString() } : null;
+    };
+    return {
+      ...group,
+      members: (group.memberIds ?? []).map(toUser),
+      admins: (group.adminIds ?? []).map(toUser),
+      isMember: (group.memberIds ?? []).includes(currentUser.id),
+      isAdmin: (group.adminIds ?? []).includes(currentUser.id),
+    };
+  });
 
   void logHttpAction({
     request,

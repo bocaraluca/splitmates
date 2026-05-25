@@ -5,6 +5,7 @@ import {
   SuspiciousStatus,
 } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { monitorSuspiciousUserBehavior } from "@/lib/splitmates/services/ai-monitor-service";
 
 export const SUSPICIOUS_RULE_KEYS = {
   MULTIPLE_FAILED_LOGINS: "multiple_failed_logins",
@@ -38,18 +39,15 @@ type DetectionRuleRecord = {
 
 type TriggeredRule = {
   rule: DetectionRuleRecord;
-  scoreIncrease: number;
   note: string;
   actionJson: Prisma.InputJsonValue;
 };
 
 export type SuspiciousEvaluationResult = {
   suspiciousUserId: number;
-  totalScoreIncrease: number;
   triggeredRules: Array<{
     ruleId: number;
     key: string;
-    scoreIncrease: number;
     note: string;
   }>;
   suspiciousUser: {
@@ -60,7 +58,6 @@ export type SuspiciousEvaluationResult = {
   alertCreated: boolean;
 } | null;
 
-const SUSPICIOUS_SCORE_THRESHOLD = 10;
 const LOGIN_FAILED_MIN_COUNT = 5;
 const LOGIN_FAILED_WINDOW_MINUTES = 5;
 const DELETE_ACTION_MIN_COUNT = 10;
@@ -101,28 +98,10 @@ function buildReason(rule: DetectionRuleRecord, count: number, windowMinutes: nu
   return `${rule.name}: ${count} events in the last ${windowMinutes} minutes`;
 }
 
-function buildAlertMessage(score: number, reasons: string[]): string {
-  const joined = reasons.join("; ");
-  return `Suspicious activity score reached ${score}. ${joined}`;
-}
-
 function normalizeActionJson(value: unknown): Prisma.InputJsonValue {
-  if (value === null || value === undefined) {
-    return {};
-  }
-
-  if (
-    typeof value === "string" ||
-    typeof value === "number" ||
-    typeof value === "boolean"
-  ) {
-    return value;
-  }
-
-  if (Array.isArray(value) || isRecord(value)) {
-    return value as Prisma.InputJsonValue;
-  }
-
+  if (value === null || value === undefined) return {};
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return value;
+  if (Array.isArray(value) || isRecord(value)) return value as Prisma.InputJsonValue;
   return {};
 }
 
@@ -145,10 +124,7 @@ async function countMatchingLogs(args: {
       userId: args.userId,
       actionType: args.actionTypes ? { in: args.actionTypes } : undefined,
       outcome: args.outcome,
-      createdAt: {
-        gte: args.createdAtGte,
-        lte: args.createdAtLte,
-      },
+      createdAt: { gte: args.createdAtGte, lte: args.createdAtLte },
     },
   });
 }
@@ -157,39 +133,25 @@ async function evaluateLoginFailedRule(
   log: SuspiciousLogInput,
   rule: DetectionRuleRecord,
 ): Promise<TriggeredRule | null> {
-  if (log.actionType !== LOGIN_FAILED_ACTION_TYPE || log.outcome !== LogOutcome.failed) {
-    return null;
-  }
+  if (log.actionType !== LOGIN_FAILED_ACTION_TYPE || log.outcome !== LogOutcome.failed) return null;
 
   const params = readParams(rule.params);
   const threshold = readNumberParam(params, "count", LOGIN_FAILED_MIN_COUNT);
   const windowMinutes = readNumberParam(params, "windowMin", LOGIN_FAILED_WINDOW_MINUTES);
-  const createdAtGte = windowStartFromMinutes(log.createdAt, windowMinutes);
   const count = await countMatchingLogs({
     userId: log.userId,
     actionTypes: [LOGIN_FAILED_ACTION_TYPE],
     outcome: LogOutcome.failed,
-    createdAtGte,
+    createdAtGte: windowStartFromMinutes(log.createdAt, windowMinutes),
     createdAtLte: log.createdAt,
   });
 
-  if (count < threshold) {
-    return null;
-  }
-
-  const note = buildReason(rule, count, windowMinutes);
+  if (count < threshold) return null;
 
   return {
     rule,
-    scoreIncrease: rule.weight,
-    note,
-    actionJson: normalizeActionJson({
-      ruleKey: rule.key,
-      threshold,
-      windowMinutes,
-      matchedCount: count,
-      actionType: log.actionType,
-    }),
+    note: buildReason(rule, count, windowMinutes),
+    actionJson: normalizeActionJson({ ruleKey: rule.key, threshold, windowMinutes, matchedCount: count, actionType: log.actionType }),
   };
 }
 
@@ -197,38 +159,24 @@ async function evaluateDeleteRule(
   log: SuspiciousLogInput,
   rule: DetectionRuleRecord,
 ): Promise<TriggeredRule | null> {
-  if (!DELETE_ACTION_TYPES.includes(log.actionType)) {
-    return null;
-  }
+  if (!DELETE_ACTION_TYPES.includes(log.actionType)) return null;
 
   const params = readParams(rule.params);
   const threshold = readNumberParam(params, "count", DELETE_ACTION_MIN_COUNT);
   const windowMinutes = readNumberParam(params, "windowMin", DELETE_ACTION_WINDOW_MINUTES);
-  const createdAtGte = windowStartFromMinutes(log.createdAt, windowMinutes);
   const count = await countMatchingLogs({
     userId: log.userId,
     actionTypes: DELETE_ACTION_TYPES,
-    createdAtGte,
+    createdAtGte: windowStartFromMinutes(log.createdAt, windowMinutes),
     createdAtLte: log.createdAt,
   });
 
-  if (count < threshold) {
-    return null;
-  }
-
-  const note = buildReason(rule, count, windowMinutes);
+  if (count < threshold) return null;
 
   return {
     rule,
-    scoreIncrease: rule.weight,
-    note,
-    actionJson: normalizeActionJson({
-      ruleKey: rule.key,
-      threshold,
-      windowMinutes,
-      matchedCount: count,
-      actionType: log.actionType,
-    }),
+    note: buildReason(rule, count, windowMinutes),
+    actionJson: normalizeActionJson({ ruleKey: rule.key, threshold, windowMinutes, matchedCount: count, actionType: log.actionType }),
   };
 }
 
@@ -236,38 +184,24 @@ async function evaluateForbiddenRule(
   log: SuspiciousLogInput,
   rule: DetectionRuleRecord,
 ): Promise<TriggeredRule | null> {
-  if (log.outcome !== LogOutcome.forbidden) {
-    return null;
-  }
+  if (log.outcome !== LogOutcome.forbidden) return null;
 
   const params = readParams(rule.params);
   const threshold = readNumberParam(params, "count", FORBIDDEN_ACTION_MIN_COUNT);
   const windowMinutes = readNumberParam(params, "windowMin", FORBIDDEN_ACTION_WINDOW_MINUTES);
-  const createdAtGte = windowStartFromMinutes(log.createdAt, windowMinutes);
   const count = await countMatchingLogs({
     userId: log.userId,
     outcome: LogOutcome.forbidden,
-    createdAtGte,
+    createdAtGte: windowStartFromMinutes(log.createdAt, windowMinutes),
     createdAtLte: log.createdAt,
   });
 
-  if (count < threshold) {
-    return null;
-  }
-
-  const note = buildReason(rule, count, windowMinutes);
+  if (count < threshold) return null;
 
   return {
     rule,
-    scoreIncrease: rule.weight,
-    note,
-    actionJson: normalizeActionJson({
-      ruleKey: rule.key,
-      threshold,
-      windowMinutes,
-      matchedCount: count,
-      outcome: log.outcome,
-    }),
+    note: buildReason(rule, count, windowMinutes),
+    actionJson: normalizeActionJson({ ruleKey: rule.key, threshold, windowMinutes, matchedCount: count, outcome: log.outcome }),
   };
 }
 
@@ -275,38 +209,24 @@ async function evaluateRateLimitedRule(
   log: SuspiciousLogInput,
   rule: DetectionRuleRecord,
 ): Promise<TriggeredRule | null> {
-  if (log.outcome !== LogOutcome.rate_limited) {
-    return null;
-  }
+  if (log.outcome !== LogOutcome.rate_limited) return null;
 
   const params = readParams(rule.params);
   const threshold = readNumberParam(params, "count", RATE_LIMITED_MIN_COUNT);
   const windowMinutes = readNumberParam(params, "windowMin", RATE_LIMITED_WINDOW_MINUTES);
-  const createdAtGte = windowStartFromMinutes(log.createdAt, windowMinutes);
   const count = await countMatchingLogs({
     userId: log.userId,
     outcome: LogOutcome.rate_limited,
-    createdAtGte,
+    createdAtGte: windowStartFromMinutes(log.createdAt, windowMinutes),
     createdAtLte: log.createdAt,
   });
 
-  if (count < threshold) {
-    return null;
-  }
-
-  const note = buildReason(rule, count, windowMinutes);
+  if (count < threshold) return null;
 
   return {
     rule,
-    scoreIncrease: rule.weight,
-    note,
-    actionJson: normalizeActionJson({
-      ruleKey: rule.key,
-      threshold,
-      windowMinutes,
-      matchedCount: count,
-      outcome: log.outcome,
-    }),
+    note: buildReason(rule, count, windowMinutes),
+    actionJson: normalizeActionJson({ ruleKey: rule.key, threshold, windowMinutes, matchedCount: count, outcome: log.outcome }),
   };
 }
 
@@ -328,65 +248,6 @@ async function evaluateRule(
   }
 }
 
-async function createObservation(args: {
-  suspiciousUserId: number;
-  logId: bigint;
-  ruleId: number;
-  scoreIncrease: number;
-  note: string;
-  actionJson: Prisma.InputJsonValue;
-}) {
-  return prisma.observation.create({
-    data: {
-      suspiciousUserId: args.suspiciousUserId,
-      logId: args.logId,
-      ruleId: args.ruleId,
-      scoreIncrease: args.scoreIncrease,
-      note: args.note,
-      actionJson: args.actionJson,
-    },
-  });
-}
-
-async function upsertSuspiciousUser(args: {
-  userId: number;
-  scoreIncrease: number;
-  reason: string;
-}) {
-  const existing = await prisma.suspiciousUser.findUnique({
-    where: { userId: args.userId },
-  });
-
-  const nextStatus =
-    existing?.status === SuspiciousStatus.cleared
-      ? SuspiciousStatus.underReview
-      : existing?.status ?? SuspiciousStatus.underReview;
-
-  const suspiciousUser = existing
-    ? await prisma.suspiciousUser.update({
-        where: { userId: args.userId },
-        data: {
-          reason: args.reason,
-          status: nextStatus,
-        },
-      })
-    : await prisma.suspiciousUser.create({
-        data: {
-          userId: args.userId,
-          reason: args.reason,
-          status: nextStatus,
-        },
-      });
-
-  return {
-    suspiciousUser,
-    nextScore: args.scoreIncrease,
-    previousStatus: existing?.status ?? null,
-  };
-}
-
-
-
 export async function evaluateLogForSuspiciousActivity(
   log: SuspiciousLogInput,
 ): Promise<SuspiciousEvaluationResult> {
@@ -395,40 +256,24 @@ export async function evaluateLogForSuspiciousActivity(
 
   for (const rule of rules) {
     const triggered = await evaluateRule(log, rule);
-    if (triggered) {
-      triggeredRules.push(triggered);
-    }
+    if (triggered) triggeredRules.push(triggered);
   }
 
-  if (!triggeredRules.length) {
-    return null;
-  }
+  if (!triggeredRules.length) return null;
 
-  const totalScoreIncrease = triggeredRules.reduce((sum, triggered) => sum + triggered.scoreIncrease, 0);
-  const reasons = triggeredRules.map((triggered) => triggered.note);
+  const reasons = triggeredRules.map((t) => t.note);
   const combinedReason = reasons.join(" | ");
 
   const result = await prisma.$transaction(async (tx) => {
-    const existing = await tx.suspiciousUser.findUnique({
-      where: { userId: log.userId },
-    });
-
-    const nextStatus = SuspiciousStatus.underReview;
+    const existing = await tx.suspiciousUser.findUnique({ where: { userId: log.userId } });
 
     const suspiciousUser = existing
       ? await tx.suspiciousUser.update({
           where: { userId: log.userId },
-          data: {
-            reason: combinedReason,
-            status: nextStatus,
-          },
+          data: { reason: `Analyzing...\n\nRules: ${combinedReason}`, status: SuspiciousStatus.underReview },
         })
       : await tx.suspiciousUser.create({
-          data: {
-            userId: log.userId,
-            reason: combinedReason,
-            status: nextStatus,
-          },
+          data: { userId: log.userId, reason: `Analyzing...\n\nRules: ${combinedReason}`, status: SuspiciousStatus.underReview },
         });
 
     for (const triggered of triggeredRules) {
@@ -437,7 +282,7 @@ export async function evaluateLogForSuspiciousActivity(
           suspiciousUserId: suspiciousUser.userId,
           logId: log.id,
           ruleId: triggered.rule.id,
-          scoreIncrease: triggered.scoreIncrease,
+          scoreIncrease: triggered.rule.weight,
           note: triggered.note,
           actionJson: triggered.actionJson,
         },
@@ -446,12 +291,10 @@ export async function evaluateLogForSuspiciousActivity(
 
     return {
       suspiciousUserId: log.userId,
-      totalScoreIncrease,
-      triggeredRules: triggeredRules.map((triggered) => ({
-        ruleId: triggered.rule.id,
-        key: triggered.rule.key,
-        scoreIncrease: triggered.scoreIncrease,
-        note: triggered.note,
+      triggeredRules: triggeredRules.map((t) => ({
+        ruleId: t.rule.id,
+        key: t.rule.key,
+        note: t.note,
       })),
       suspiciousUser: {
         userId: suspiciousUser.userId,
@@ -462,34 +305,52 @@ export async function evaluateLogForSuspiciousActivity(
     };
   });
 
+  // Ollama runs in background — does not block the request
+  setImmediate(async () => {
+    try {
+      const [userRecord, recentLogs] = await Promise.all([
+        prisma.user.findUnique({ where: { id: log.userId }, select: { username: true } }),
+        prisma.log.findMany({
+          where: { userId: log.userId },
+          orderBy: { createdAt: "desc" },
+          take: 30,
+          select: { actionType: true, outcome: true, createdAt: true },
+        }),
+      ]);
+
+      const aiReason = await monitorSuspiciousUserBehavior({
+        userId: log.userId,
+        username: userRecord?.username ?? `user_${log.userId}`,
+        triggeredRules: triggeredRules.map((t) => ({ key: t.rule.key, note: t.note })),
+        recentLogs: recentLogs.map((l) => ({
+          actionType: l.actionType,
+          outcome: l.outcome,
+          createdAt: l.createdAt,
+        })),
+      });
+
+      await prisma.suspiciousUser.update({
+        where: { userId: log.userId },
+        data: { reason: `${aiReason}\n\nRules: ${combinedReason}` },
+      });
+    } catch (err) {
+      console.error("Background AI analysis failed:", err);
+    }
+  });
+
   return result;
 }
 
 export async function loadSuspiciousUsers() {
   return prisma.suspiciousUser.findMany({
-    where: {
-      status: {
-        not: SuspiciousStatus.cleared,
-      },
-    },
-    orderBy: {
-      lastSeen: "desc",
-    },
+    where: { status: { not: SuspiciousStatus.cleared } },
+    orderBy: { lastSeen: "desc" },
     include: {
       observations: {
         orderBy: { createdAt: "desc" },
-        include: {
-          rule: {
-            select: { key: true },
-          },
-        },
+        include: { rule: { select: { key: true } } },
       },
-      user: {
-        select: {
-          username: true,
-          email: true,
-        },
-      },
+      user: { select: { username: true, email: true } },
     },
   });
 }
@@ -497,10 +358,7 @@ export async function loadSuspiciousUsers() {
 export async function clearSuspiciousUser(userId: number) {
   return prisma.suspiciousUser.update({
     where: { userId },
-    data: {
-      status: SuspiciousStatus.cleared,
-      reason: null,
-    },
+    data: { status: SuspiciousStatus.cleared, reason: null },
   });
 }
 
