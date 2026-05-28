@@ -54,6 +54,7 @@ describe("admin-service", () => {
         category: "household",
         createdAt: new Date("2026-05-02T00:00:00.000Z"),
         members: [{ isAdmin: true, user: { id: 1, username: "raluca" } }],
+        _count: { members: 1 },
       },
     ]);
 

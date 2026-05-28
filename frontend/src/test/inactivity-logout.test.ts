@@ -38,7 +38,7 @@ describe("useInactivityLogout", () => {
     renderHook(() => useInactivityLogout());
 
     await act(async () => {
-      vi.advanceTimersByTime(2 * 60 * 1000);
+      vi.advanceTimersByTime(60 * 60 * 1000);
     });
 
     expect(fetchFromBackend).toHaveBeenCalledWith("/auth/logout", expect.objectContaining({ method: "POST" }));

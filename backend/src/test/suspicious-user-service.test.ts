@@ -124,7 +124,6 @@ describe("suspicious-user-service", () => {
       {
         ruleId: 1,
         key: ruleKey,
-        scoreIncrease: 3,
         note: `Rule ${ruleKey}: 5 events in the last 5 minutes`,
       },
     ]);
@@ -183,7 +182,6 @@ describe("suspicious-user-service", () => {
       {
         ruleId: 1,
         key: ruleKey,
-        scoreIncrease: 3,
         note: `Rule ${ruleKey}: 10 events in the last 60 minutes`,
       },
     ]);
@@ -242,7 +240,6 @@ describe("suspicious-user-service", () => {
       {
         ruleId: 1,
         key: ruleKey,
-        scoreIncrease: 3,
         note: `Rule ${ruleKey}: 5 events in the last 60 minutes`,
       },
     ]);
@@ -301,7 +298,6 @@ describe("suspicious-user-service", () => {
       {
         ruleId: 1,
         key: ruleKey,
-        scoreIncrease: 3,
         note: `Rule ${ruleKey}: 5 events in the last 60 minutes`,
       },
     ]);

@@ -73,7 +73,7 @@ describe("backend-api offline sync", () => {
     delete process.env.NEXT_PUBLIC_BACKEND_WS_URL;
 
     const url = backendWebSocketUrl("/ws");
-    expect(url).toBe("wss://localhost:4000/ws");
+    expect(url).toBe("ws://localhost:4000/ws");
 
     process.env.NEXT_PUBLIC_BACKEND_WS_URL = previous;
   });

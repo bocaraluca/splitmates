@@ -46,7 +46,7 @@ export const paymentSchema = z
 
 const shareSchema = z.object({
   userId: idSchema,
-  amount: moneySchema,
+  amount: z.coerce.number().min(0),
 });
 
 export const expenseSchema = z

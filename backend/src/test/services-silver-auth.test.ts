@@ -175,73 +175,60 @@ describe("verifyMagicLink", () => {
 
 describe("mail-service", () => {
   it("sendPasswordResetEmail sends email with reset URL", async () => {
-    const sendMail = vi.fn().mockResolvedValueOnce({});
+    const fetchMock = vi.fn().mockResolvedValueOnce({ ok: true });
+    vi.stubGlobal("fetch", fetchMock);
     const prisma = {
       user: { findUnique: vi.fn().mockResolvedValueOnce({ username: "alice" }) },
     };
-    vi.doMock("nodemailer", () => ({
-      default: { createTransport: vi.fn().mockReturnValue({ sendMail }) },
-    }));
     vi.doMock("@/lib/prisma", () => ({ prisma }));
-    vi.doMock("@/lib/splitmates/services/auth/mail-service", async () =>
-      await vi.importActual<typeof import("@/lib/splitmates/services/auth/mail-service")>("@/lib/splitmates/services/auth/mail-service")
-    );
     process.env.FRONTEND_URL = "http://localhost:3000";
     process.env.SMTP_USER = "test@gmail.com";
+    process.env.BREVO_API_KEY = "test-key";
 
-    const { sendPasswordResetEmail } = await import("@/lib/splitmates/services/auth/mail-service");
+    const { sendPasswordResetEmail } = await vi.importActual<typeof import("@/lib/splitmates/services/auth/mail-service")>("@/lib/splitmates/services/auth/mail-service");
     await sendPasswordResetEmail("alice@x.com", "reset-tok-123");
 
-    expect(sendMail).toHaveBeenCalledWith(expect.objectContaining({
-      to: "alice@x.com",
-      subject: expect.stringContaining("Reset"),
-    }));
-    expect(sendMail.mock.calls[0][0].html).toContain("reset-tok-123");
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.to[0].email).toBe("alice@x.com");
+    expect(body.subject).toContain("Reset");
+    expect(body.htmlContent).toContain("reset-tok-123");
   });
 
   it("sendPasswordResetEmail uses email as fallback username when user not found", async () => {
-    const sendMail = vi.fn().mockResolvedValueOnce({});
+    const fetchMock = vi.fn().mockResolvedValueOnce({ ok: true });
+    vi.stubGlobal("fetch", fetchMock);
     const prisma = {
       user: { findUnique: vi.fn().mockResolvedValueOnce(null) },
     };
-    vi.doMock("nodemailer", () => ({
-      default: { createTransport: vi.fn().mockReturnValue({ sendMail }) },
-    }));
     vi.doMock("@/lib/prisma", () => ({ prisma }));
-    vi.doMock("@/lib/splitmates/services/auth/mail-service", async () =>
-      await vi.importActual<typeof import("@/lib/splitmates/services/auth/mail-service")>("@/lib/splitmates/services/auth/mail-service")
-    );
     process.env.FRONTEND_URL = "http://localhost:3000";
     process.env.SMTP_USER = "test@gmail.com";
+    process.env.BREVO_API_KEY = "test-key";
 
-    const { sendPasswordResetEmail } = await import("@/lib/splitmates/services/auth/mail-service");
+    const { sendPasswordResetEmail } = await vi.importActual<typeof import("@/lib/splitmates/services/auth/mail-service")>("@/lib/splitmates/services/auth/mail-service");
     await sendPasswordResetEmail("ghost@x.com", "tok");
 
-    expect(sendMail.mock.calls[0][0].html).toContain("ghost@x.com");
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.htmlContent).toContain("ghost@x.com");
   });
 
   it("sendMagicLinkEmail sends email with magic link URL", async () => {
-    const sendMail = vi.fn().mockResolvedValueOnce({});
+    const fetchMock = vi.fn().mockResolvedValueOnce({ ok: true });
+    vi.stubGlobal("fetch", fetchMock);
     const prisma = {
       user: { findUnique: vi.fn().mockResolvedValueOnce({ username: "bob" }) },
     };
-    vi.doMock("nodemailer", () => ({
-      default: { createTransport: vi.fn().mockReturnValue({ sendMail }) },
-    }));
     vi.doMock("@/lib/prisma", () => ({ prisma }));
-    vi.doMock("@/lib/splitmates/services/auth/mail-service", async () =>
-      await vi.importActual<typeof import("@/lib/splitmates/services/auth/mail-service")>("@/lib/splitmates/services/auth/mail-service")
-    );
     process.env.FRONTEND_URL = "http://localhost:3000";
     process.env.SMTP_USER = "test@gmail.com";
+    process.env.BREVO_API_KEY = "test-key";
 
-    const { sendMagicLinkEmail } = await import("@/lib/splitmates/services/auth/mail-service");
+    const { sendMagicLinkEmail } = await vi.importActual<typeof import("@/lib/splitmates/services/auth/mail-service")>("@/lib/splitmates/services/auth/mail-service");
     await sendMagicLinkEmail("bob@x.com", "magic-tok-abc");
 
-    expect(sendMail).toHaveBeenCalledWith(expect.objectContaining({
-      to: "bob@x.com",
-      subject: expect.stringContaining("Login"),
-    }));
-    expect(sendMail.mock.calls[0][0].html).toContain("magic-tok-abc");
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.to[0].email).toBe("bob@x.com");
+    expect(body.subject).toContain("Login");
+    expect(body.htmlContent).toContain("magic-tok-abc");
   });
 });
