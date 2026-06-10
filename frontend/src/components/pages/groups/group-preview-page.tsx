@@ -658,7 +658,7 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
           ) : null}
 
           <Box sx={{ borderBottom: "1px solid rgba(46, 58, 86, 0.12)" }}>
-            <Tabs value={tabValue} onChange={(_, newValue) => setTabValue(newValue)} sx={{ minHeight: 54 }}>
+            <Tabs value={tabValue} onChange={(_, newValue) => setTabValue(newValue)} variant="scrollable" scrollButtons="auto" allowScrollButtonsMobile sx={{ minHeight: 54 }}>
               <Tab
                 value="expenses"
                 icon={<ReceiptLongRoundedIcon />}

@@ -187,7 +187,12 @@ export function AppNavbar() {
               {avatarInitial}
             </Box>
           </Stack>
-          <Menu anchorEl={mobileMenuAnchor} open={mobileMenuOpen} onClose={handleCloseMobileMenu}>
+          <Menu
+            anchorEl={mobileMenuAnchor}
+            open={mobileMenuOpen}
+            onClose={handleCloseMobileMenu}
+            slotProps={{ paper: { sx: { minWidth: 180 } } }}
+          >
             {role !== "admin" && (
               <>
                 <MenuItem component={Link} href="/dashboard" onClick={handleCloseMobileMenu}>
@@ -207,9 +212,7 @@ export function AppNavbar() {
               </MenuItem>
             )}
           </Menu>
-          <Menu anchorEl={userMenuAnchor} open={userMenuOpen} onClose={handleCloseUserMenu}
-            slotProps={{ paper: { sx: { bgcolor: "rgba(30,10,53,0.65)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", border: "1px solid rgba(255,255,255,0.12)", boxShadow: "0 16px 40px rgba(0,0,0,0.5)" } } }}
-          >
+          <Menu anchorEl={userMenuAnchor} open={userMenuOpen} onClose={handleCloseUserMenu}>
             <Box sx={{ px: 2, py: 1.2 }}>
               <Typography variant="caption" sx={{ color: "text.secondary", letterSpacing: "0.15em", textTransform: "uppercase" }}>
                 Logged in as

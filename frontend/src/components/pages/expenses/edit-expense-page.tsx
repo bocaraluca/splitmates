@@ -345,7 +345,7 @@ export function EditExpensePage({ groupId, expenseId }: { groupId: number; expen
                   anchorEl={scanMenuAnchor}
                   open={Boolean(scanMenuAnchor)}
                   onClose={() => setScanMenuAnchor(null)}
-                  PaperProps={{ sx: { background: "rgba(20,10,50,0.95)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 2, color: "white" } }}
+                  slotProps={{ paper: { sx: { background: "rgba(20,10,50,0.95)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 2, color: "white" } } }}
                 >
                   <MenuItem onClick={() => { setScanMenuAnchor(null); cameraInputRef.current?.click(); }}>
                     <ListItemIcon><CameraAltRoundedIcon sx={{ color: "#e83ea8" }} /></ListItemIcon>

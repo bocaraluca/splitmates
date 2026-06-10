@@ -1,4 +1,4 @@
-import { alpha, createTheme } from "@mui/material/styles";
+import { createTheme } from "@mui/material/styles";
 
 export const appTheme = createTheme({
   palette: {
@@ -12,7 +12,7 @@ export const appTheme = createTheme({
     },
     background: {
       default: "#120228",
-      paper: "rgba(255, 255, 255, 0.06)",
+      paper: "#1e0a38",
     },
     text: {
       primary: "rgba(255, 255, 255, 0.93)",
@@ -70,6 +70,43 @@ export const appTheme = createTheme({
       styleOverrides: {
         root: {
           backgroundImage: "none",
+        },
+      },
+    },
+    MuiMenu: {
+      styleOverrides: {
+        paper: {
+          backgroundColor: "#1e0a38",
+          border: "1px solid rgba(255,255,255,0.15)",
+          boxShadow: "0 16px 48px rgba(0,0,0,0.6)",
+        },
+      },
+    },
+    MuiMenuItem: {
+      styleOverrides: {
+        root: {
+          fontSize: 15,
+          fontWeight: 600,
+          paddingTop: 10,
+          paddingBottom: 10,
+          paddingLeft: 18,
+          paddingRight: 18,
+          "&:hover": {
+            backgroundColor: "rgba(232,62,168,0.12)",
+          },
+          "&.Mui-selected": {
+            backgroundColor: "rgba(232,62,168,0.18)",
+            "&:hover": {
+              backgroundColor: "rgba(232,62,168,0.24)",
+            },
+          },
+        },
+      },
+    },
+    MuiSelect: {
+      styleOverrides: {
+        icon: {
+          color: "rgba(255,255,255,0.6)",
         },
       },
     },

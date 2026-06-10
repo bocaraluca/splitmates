@@ -138,24 +138,32 @@ export function NotificationsPage() {
   }
 
   return (
-    <Box sx={{ minHeight: "100vh", background: "transparent" }}>
+    <Box sx={{ minHeight: "100vh", background: "linear-gradient(135deg, #1a0533 0%, #2d0a4e 40%, #0f1a3d 100%)", backgroundAttachment: "fixed" }}>
       <AppNavbar />
       <Container maxWidth="lg" sx={{ py: { xs: 3, md: 5 } }}>
         <Stack spacing={3}>
-          <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between" }}>
-            <Typography variant="h3" sx={{ fontWeight: 900 }}>
+          <Stack
+            direction="row"
+            sx={{
+              alignItems: { xs: "flex-start", md: "center" },
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: 1.5,
+            }}
+          >
+            <Typography variant="h3" sx={{ fontWeight: 900, fontSize: { xs: 28, md: 36 } }}>
               Notifications
               {unreadCount > 0 && (
-                <Box component="span" sx={{ ml: 1.5, fontSize: 16, bgcolor: "#e74c3c", color: "white", px: 1, py: 0.3, borderRadius: 999, fontWeight: 700, verticalAlign: "middle" }}>
+                <Box component="span" sx={{ ml: 1.5, fontSize: 14, bgcolor: "#e74c3c", color: "white", px: 1, py: 0.3, borderRadius: 999, fontWeight: 700, verticalAlign: "middle" }}>
                   {unreadCount} new
                 </Box>
               )}
             </Typography>
-            <Stack direction="row" spacing={1}>
+            <Stack direction="row" spacing={1} sx={{ flexShrink: 0 }}>
               {notifications.length > 0 && unreadCount > 0 && (
                 <Button
                   onClick={() => void handleMarkAllRead()}
-                  sx={{ fontWeight: 700, textTransform: "none", color: "#a78bfa" }}
+                  sx={{ fontWeight: 700, textTransform: "none", color: "#a78bfa", fontSize: { xs: 13, md: 14 } }}
                 >
                   Mark all read
                 </Button>
@@ -163,7 +171,7 @@ export function NotificationsPage() {
               {notifications.length > 0 && (
                 <Button
                   onClick={() => void handleDeleteAll()}
-                  sx={{ fontWeight: 700, textTransform: "none", color: "#e74c3c" }}
+                  sx={{ fontWeight: 700, textTransform: "none", color: "#e74c3c", fontSize: { xs: 13, md: 14 } }}
                   startIcon={<DeleteOutlineRoundedIcon />}
                 >
                   Delete all
@@ -190,9 +198,10 @@ export function NotificationsPage() {
                     sx={{
                       px: 2.5,
                       py: 2,
-                      cursor: notif.groupId ? "pointer" : "default",
+                      cursor: "pointer",
+                      WebkitTapHighlightColor: "transparent",
                       bgcolor: notif.read ? "transparent" : "rgba(167,139,250,0.08)",
-                      "&:hover": { bgcolor: notif.groupId ? "rgba(167,139,250,0.12)" : notif.read ? "transparent" : "rgba(167,139,250,0.08)" },
+                      "&:hover": { bgcolor: "rgba(167,139,250,0.12)" },
                       transition: "background 0.15s",
                     }}
                   >
