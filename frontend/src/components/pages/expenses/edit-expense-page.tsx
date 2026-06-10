@@ -275,12 +275,28 @@ export function EditExpensePage({ groupId, expenseId }: { groupId: number; expen
         },
       }}
     >
-      <Button component={Link} href={`/groups/${groupId}`} sx={{ position: "absolute", top: 24, left: 24, color: "white", fontWeight: 700, zIndex: 10, fontSize: 18 }}>
-        ← Back
-      </Button>
-      <Container maxWidth="md" sx={{ py: { xs: 3, md: 5 }, display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", position: "relative", zIndex: 1 }}>
+      <Container maxWidth="md" sx={{ py: { xs: 2, md: 5 }, display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", position: "relative", zIndex: 1 }}>
         <Stack sx={{ width: "100%" }}>
-          <Card sx={{ borderRadius: 3, background: "rgba(10,5,30,0.72)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", border: "1px solid rgba(255,255,255,0.15)", boxShadow: "0 24px 60px rgba(0,0,0,0.4)" }}>
+          <Button
+            component={Link}
+            href={`/groups/${groupId}`}
+            sx={{
+              alignSelf: "flex-start",
+              mb: 1.5,
+              color: "white",
+              fontWeight: 700,
+              fontSize: 15,
+              bgcolor: "rgba(255,255,255,0.12)",
+              border: "1px solid rgba(255,255,255,0.22)",
+              px: 2,
+              py: 0.8,
+              borderRadius: 999,
+              "&:hover": { bgcolor: "rgba(255,255,255,0.2)" },
+            }}
+          >
+            ← Back
+          </Button>
+          <Card sx={{ borderRadius: "16px", background: "rgba(10,5,30,0.72)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", border: "1px solid rgba(255,255,255,0.15)", boxShadow: "0 24px 60px rgba(0,0,0,0.4)" }}>
             <CardContent sx={{ p: { xs: 4, md: 6 } }}>
               {/* Hidden file inputs — camera (mobile) and gallery */}
               <input

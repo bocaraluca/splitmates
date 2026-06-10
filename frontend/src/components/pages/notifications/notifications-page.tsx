@@ -123,8 +123,8 @@ export function NotificationsPage() {
     }
   }
 
-  function handleNotifClick(notif: Notification) {
-    void handleMarkRead(notif.id);
+  async function handleNotifClick(notif: Notification) {
+    await handleMarkRead(notif.id);
     if (notif.groupId) {
       if (notif.type === "chat_message") {
         router.push(`/groups/${notif.groupId}/chat`);
@@ -194,7 +194,7 @@ export function NotificationsPage() {
               notifications.map((notif, index) => (
                 <Box key={notif.id}>
                   <Box
-                    onClick={() => handleNotifClick(notif)}
+                    onClick={() => void handleNotifClick(notif)}
                     sx={{
                       px: 2.5,
                       py: 2,
