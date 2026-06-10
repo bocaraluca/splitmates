@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { prisma } from "../../prisma.ts";
 import type { Id } from "../model/types";
 
 type NotificationType = "group_added" | "expense_added" | "payment_request" | "payment_received" | "payment_failed" | "chat_message";
