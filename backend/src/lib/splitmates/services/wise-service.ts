@@ -69,8 +69,6 @@ async function fundTransfer(profileId: number, transferId: number): Promise<void
   const isSandbox = WISE_API_URL.includes("sandbox");
 
   if (isSandbox) {
-    // In sandbox, personal accounts can't fund via API.
-    // Transfer is created in Wise — we simulate completion for demo purposes.
     return;
   }
 

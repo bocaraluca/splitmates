@@ -15,13 +15,15 @@ async function forwardRequest(request: NextRequest, pathSegments: string[]) {
   headers.set("accept", headers.get("accept") ?? "application/json");
 
   const shouldSendBody = request.method !== "GET" && request.method !== "HEAD";
-  const body = shouldSendBody ? await request.text() : undefined;
+  const body = shouldSendBody ? request.body : undefined;
 
   try {
     const response = await fetch(backendUrl, {
       method: request.method,
       headers,
       body,
+      // @ts-expect-error duplex required for streaming body in Node
+      duplex: "half",
     });
 
     const responseHeaders = new Headers(response.headers);

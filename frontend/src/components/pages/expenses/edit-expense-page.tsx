@@ -1,9 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Box, Button, Card, CardContent, Container, MenuItem, Stack, TextField, Typography } from "@mui/material";
+import DocumentScannerRoundedIcon from "@mui/icons-material/DocumentScannerRounded";
+import CameraAltRoundedIcon from "@mui/icons-material/CameraAltRounded";
+import PhotoLibraryRoundedIcon from "@mui/icons-material/PhotoLibraryRounded";
+import { Box, Button, Card, CardContent, CircularProgress, Container, ListItemIcon, Menu, MenuItem, Stack, TextField, Tooltip, Typography } from "@mui/material";
 import {
   addExpenseToOfflineCache,
   fetchFromBackend,
@@ -52,9 +55,43 @@ export function EditExpensePage({ groupId, expenseId }: { groupId: number; expen
   const [paidByUserIdOverride, setPaidByUserIdOverride] = useState<string | null>(null);
   const [titleDraft, setTitleDraft] = useState<string>("");
   const [amountDraft, setAmountDraft] = useState<string>("");
+  const [dateDraft, setDateDraft] = useState<string>("");
   const [customSharesByUserId, setCustomSharesByUserId] = useState<Record<number, string>>({});
   const [token] = useState<string | null>(getToken);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [scanMsg, setScanMsg] = useState<string | null>(null);
+  const [scanMenuAnchor, setScanMenuAnchor] = useState<HTMLElement | null>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+
+  async function handleReceiptScan(file: File) {
+    if (!token) return;
+    setScanning(true);
+    setScanMsg(null);
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve((reader.result as string).split(",")[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const data = await fetchFromBackend<{ amount: number | null; title: string | null; category: string | null; date: string | null }>(
+        "/expenses/parse-receipt",
+        { method: "POST", token, body: JSON.stringify({ imageBase64: base64, mimeType: file.type || "image/jpeg" }) }
+      );
+      if (data.amount) setAmountDraft(String(data.amount));
+      if (data.title) setTitleDraft(data.title);
+      if (data.category) setCategoryOverride(data.category);
+      const receiptDate = data.date ?? new Date().toISOString().slice(0, 10);
+      setDateDraft(receiptDate);
+      setScanMsg(data.amount ? "Receipt scanned successfully." : "Could not read receipt. Fill in manually.");
+    } catch {
+      setScanMsg("Scan failed. Fill in manually.");
+    } finally {
+      setScanning(false);
+    }
+  }
 
   useEffect(() => {
     const auth = token ? { token } : {};
@@ -239,17 +276,96 @@ export function EditExpensePage({ groupId, expenseId }: { groupId: number; expen
       }}
     >
       <Button component={Link} href={`/groups/${groupId}`} sx={{ position: "absolute", top: 24, left: 24, color: "white", fontWeight: 700, zIndex: 10, fontSize: 18 }}>
-        ← Back to Group
+        ← Back
       </Button>
       <Container maxWidth="md" sx={{ py: { xs: 3, md: 5 }, display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", position: "relative", zIndex: 1 }}>
         <Stack sx={{ width: "100%" }}>
           <Card sx={{ borderRadius: 3, background: "rgba(10,5,30,0.72)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", border: "1px solid rgba(255,255,255,0.15)", boxShadow: "0 24px 60px rgba(0,0,0,0.4)" }}>
             <CardContent sx={{ p: { xs: 4, md: 6 } }}>
-              <Typography variant="h2" sx={{ fontSize: { xs: 34, md: 44 }, fontWeight: 800, lineHeight: 1.05 }}>
-                {pageMode === "edit" ? "Edit expense" : "Add expense"}
-              </Typography>
+              {/* Hidden file inputs — camera (mobile) and gallery */}
+              <input
+                ref={cameraInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                style={{ display: "none" }}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) void handleReceiptScan(file);
+                  e.target.value = "";
+                }}
+              />
+              <input
+                ref={galleryInputRef}
+                type="file"
+                accept="image/*"
+                style={{ display: "none" }}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) void handleReceiptScan(file);
+                  e.target.value = "";
+                }}
+              />
+
+              <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between", mb: 3 }}>
+                <Typography variant="h2" sx={{ fontSize: { xs: 34, md: 44 }, fontWeight: 800, lineHeight: 1.05 }}>
+                  {pageMode === "edit" ? "Edit expense" : "Add expense"}
+                </Typography>
+                <Tooltip title="Take a photo or upload a receipt — amount, title and category will be filled automatically">
+                  <Button
+                    variant="contained"
+                    size="large"
+                    startIcon={scanning ? <CircularProgress size={18} sx={{ color: "white" }} /> : <DocumentScannerRoundedIcon sx={{ fontSize: 24 }} />}
+                    onClick={(e) => {
+                      const isMobile = window.matchMedia("(pointer: coarse)").matches;
+                      if (isMobile) {
+                        setScanMenuAnchor(e.currentTarget);
+                      } else {
+                        galleryInputRef.current?.click();
+                      }
+                    }}
+                    disabled={scanning}
+                    sx={{
+                      borderRadius: 2.5,
+                      textTransform: "none",
+                      fontWeight: 800,
+                      fontSize: 16,
+                      py: 1.4,
+                      px: 3,
+                      background: "linear-gradient(135deg, #e83ea8, #8b5cf6)",
+                      boxShadow: "0 8px 24px rgba(232,62,168,0.35)",
+                      "&:hover": { opacity: 0.9, boxShadow: "0 10px 28px rgba(232,62,168,0.45)" },
+                      "&.Mui-disabled": { opacity: 0.6 },
+                    }}
+                  >
+                    {scanning ? "Scanning..." : "Scan receipt"}
+                  </Button>
+                </Tooltip>
+                <Menu
+                  anchorEl={scanMenuAnchor}
+                  open={Boolean(scanMenuAnchor)}
+                  onClose={() => setScanMenuAnchor(null)}
+                  PaperProps={{ sx: { background: "rgba(20,10,50,0.95)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 2, color: "white" } }}
+                >
+                  <MenuItem onClick={() => { setScanMenuAnchor(null); cameraInputRef.current?.click(); }}>
+                    <ListItemIcon><CameraAltRoundedIcon sx={{ color: "#e83ea8" }} /></ListItemIcon>
+                    Take photo
+                  </MenuItem>
+                  <MenuItem onClick={() => { setScanMenuAnchor(null); galleryInputRef.current?.click(); }}>
+                    <ListItemIcon><PhotoLibraryRoundedIcon sx={{ color: "#8b5cf6" }} /></ListItemIcon>
+                    Choose from gallery
+                  </MenuItem>
+                </Menu>
+              </Stack>
+              {scanMsg && (
+                <Typography variant="caption" sx={{ color: scanMsg.includes("Could not") || scanMsg.includes("failed") ? "#f87171" : "#34d399", mb: 1, display: "block" }}>
+                  {scanMsg}
+                </Typography>
+              )}
 
               <Box component="form" onSubmit={handleSubmit} sx={{ display: "grid", gap: 2.2 }}>
+
+
                 <TextField
                   name="title"
                   label="Title"
@@ -271,7 +387,8 @@ export function EditExpensePage({ groupId, expenseId }: { groupId: number; expen
                   name="date"
                   label="Date"
                   type="date"
-                  defaultValue={currentExpense?.date?.slice(0, 10) ?? new Date().toISOString().slice(0, 10)}
+                  value={dateDraft || currentExpense?.date?.slice(0, 10) || new Date().toISOString().slice(0, 10)}
+                  onChange={(e) => setDateDraft(e.target.value)}
                   fullWidth
                   slotProps={{ inputLabel: { shrink: true } }}
                 />
