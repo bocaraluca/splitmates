@@ -30,15 +30,18 @@ const authCopy = {
 
 const fieldSx = {
   "& .MuiOutlinedInput-root": {
-    borderRadius: 1,
-    backgroundColor: "#d5deea",
-    "& fieldset": { borderColor: "#ccd4e0" },
-    "&:hover fieldset": { borderColor: "#b9c2d0" },
-    "&.Mui-focused fieldset": { borderColor: "#aeb8c8" },
+    borderRadius: 1.5,
+    backgroundColor: "rgba(255,255,255,0.07)",
+    color: "white",
+    "& fieldset": { borderColor: "rgba(255,255,255,0.15)" },
+    "&:hover fieldset": { borderColor: "rgba(255,255,255,0.3)" },
+    "&.Mui-focused fieldset": { borderColor: "#e83ea8" },
+    "& input::placeholder": { color: "rgba(255,255,255,0.3)", opacity: 1 },
   },
+  "& .MuiInputBase-input": { color: "white" },
 } as const;
 
-const labelSx = { fontSize: 16, fontWeight: 800, color: "#2f3137" } as const;
+const labelSx = { fontSize: 15, fontWeight: 700, color: "rgba(255,255,255,0.75)" } as const;
 
 export function AuthPage({ mode }: { mode: "login" | "signup" }) {
   const router = useRouter();
@@ -123,13 +126,14 @@ export function AuthPage({ mode }: { mode: "login" | "signup" }) {
             justifySelf: { xs: "center", lg: "stretch" },
             width: "100%",
             maxWidth: 520,
-            background: "rgba(239, 239, 239, 0.72)",
-            borderRadius: 2,
+            background: "rgba(10,5,30,0.72)",
+            borderRadius: 3,
             px: { xs: 3, md: 5.5 },
             py: { xs: 4, md: 5 },
-            boxShadow: "0 8px 26px rgba(28, 28, 52, 0.10)",
-            backdropFilter: "blur(18px)",
-            border: "1px solid rgba(255,255,255,0.58)",
+            boxShadow: "0 24px 60px rgba(0,0,0,0.5)",
+            backdropFilter: "blur(24px)",
+            WebkitBackdropFilter: "blur(24px)",
+            border: "1px solid rgba(255,255,255,0.12)",
           }}
         >
           <Typography
@@ -138,13 +142,13 @@ export function AuthPage({ mode }: { mode: "login" | "signup" }) {
               fontSize: { xs: 52, md: 62 },
               fontWeight: 900,
               lineHeight: 0.92,
-              color: "#2f3137",
+              color: "white",
             }}
           >
             {copy.title}
           </Typography>
 
-          <Typography sx={{ mt: 1.2, color: "#6f727a", fontSize: 14 }}>
+          <Typography sx={{ mt: 1.2, color: "rgba(255,255,255,0.5)", fontSize: 14 }}>
             {copy.subtitle}
           </Typography>
 
@@ -174,7 +178,7 @@ export function AuthPage({ mode }: { mode: "login" | "signup" }) {
               </>
             ) : (
               <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
-                <Link href="/forgot-password" style={{ color: "#7f76d5", fontWeight: 700, fontSize: 13, textDecoration: "none" }}>
+                <Link href="/forgot-password" style={{ color: "#a78bfa", fontWeight: 700, fontSize: 13, textDecoration: "none" }}>
                   Forgot password?
                 </Link>
               </Box>
@@ -190,12 +194,12 @@ export function AuthPage({ mode }: { mode: "login" | "signup" }) {
                 fontSize: { xs: 18, md: 22 },
                 fontWeight: 800,
                 textTransform: "none",
-                background: "#e992a2",
-                boxShadow: "0 8px 20px rgba(209, 133, 153, 0.35)",
+                background: "linear-gradient(90deg, #e83ea8, #8b5cf6)",
+                boxShadow: "0 8px 24px rgba(232,62,168,0.4)",
                 width: "100%",
                 maxWidth: 260,
                 justifySelf: "center",
-                "&:hover": { boxShadow: "0 8px 20px rgba(209, 133, 153, 0.35)", background: "#de8697" },
+                "&:hover": { boxShadow: "0 8px 24px rgba(232,62,168,0.5)", opacity: 0.92 },
               }}
             >
               {copy.action}
@@ -203,7 +207,7 @@ export function AuthPage({ mode }: { mode: "login" | "signup" }) {
           </Box>
 
           <Box sx={{ mt: 2, display: "grid", gap: 1.2 }}>
-            <Typography sx={{ textAlign: "center", color: "#6f727a", fontSize: 13 }}>or</Typography>
+            <Typography sx={{ textAlign: "center", color: "rgba(255,255,255,0.35)", fontSize: 13 }}>or</Typography>
             <Button
               component={Link}
               href="/magic-link"
@@ -247,9 +251,9 @@ export function AuthPage({ mode }: { mode: "login" | "signup" }) {
             </Button>
           </Box>
 
-          <Typography variant="body2" sx={{ mt: 2.2, color: "#6f727a", fontSize: 14, textAlign: "center" }}>
+          <Typography variant="body2" sx={{ mt: 2.2, color: "rgba(255,255,255,0.45)", fontSize: 14, textAlign: "center" }}>
             {copy.bottomText}{" "}
-            <Link href={copy.bottomHref} style={{ color: "#7f76d5", fontWeight: 700, textDecoration: "none" }}>
+            <Link href={copy.bottomHref} style={{ color: "#e83ea8", fontWeight: 700, textDecoration: "none" }}>
               {copy.bottomLink}
             </Link>
           </Typography>

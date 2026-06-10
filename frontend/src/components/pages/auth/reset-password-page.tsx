@@ -50,7 +50,7 @@ export function ResetPasswordPage() {
 
   if (!token) {
     return (
-      <Box sx={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f5f7ff" }}>
+      <Box sx={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "transparent" }}>
         <Typography sx={{ color: "#2f3137", fontWeight: 700 }}>
           Invalid reset link.{" "}
           <Link href="/forgot-password" style={{ color: "#7f76d5" }}>Request a new one.</Link>

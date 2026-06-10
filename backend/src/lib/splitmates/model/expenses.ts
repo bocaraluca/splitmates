@@ -39,6 +39,7 @@ export interface ExpenseListItem {
   paidBy: User | null;
   category: ExpenseCategory;
   splitType: SplitType;
+  isBadHabit: boolean;
 }
 
 export interface ExpenseListResponse {

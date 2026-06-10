@@ -2,6 +2,7 @@ import { Server as SocketIOServer } from 'socket.io';
 import { connectToMongoDB } from './mongodb.ts';
 import { prisma } from './prisma.ts';
 import { createMessage, deleteMessage } from './splitmates/services/chat-service.ts';
+import { notifyChatMessage } from './splitmates/services/notification-service.ts';
 import type { Server as HTTPServer } from 'http';
 
 let io: SocketIOServer | null = null;
@@ -147,6 +148,24 @@ export async function initializeSocket(server: HTTPServer) {
             messageId: message._id.toString(),
             timestamp: new Date().toISOString(),
           });
+
+          // Notify group members who are not in the chat room
+          void (async () => {
+            try {
+              const group = await prisma.group.findUnique({ where: { id: groupId }, include: { members: true } });
+              if (group) {
+                const activeChatUsers = activeUsers.get(groupId) ?? new Set();
+                const offlineMembers = group.members
+                  .map((m) => m.userId)
+                  .filter((id) => !activeChatUsers.has(id) && id !== userId);
+                if (offlineMembers.length > 0) {
+                  await notifyChatMessage(offlineMembers, userId, groupId, group.name, username, content.trim());
+                }
+              }
+            } catch (err) {
+              console.error('Error sending chat notifications:', err);
+            }
+          })();
         } catch (err: any) {
           console.error('Error creating chat message:', err);
           const msg = err && err.code === 'FORBIDDEN' ? 'Not authorized to post in this group' : 'Failed to send message';

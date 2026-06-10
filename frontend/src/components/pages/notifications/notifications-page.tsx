@@ -8,9 +8,11 @@ import PaymentsRoundedIcon from "@mui/icons-material/PaymentsRounded";
 import RequestQuoteRoundedIcon from "@mui/icons-material/RequestQuoteRounded";
 import ErrorOutlineRoundedIcon from "@mui/icons-material/ErrorOutlineRounded";
 import NotificationsRoundedIcon from "@mui/icons-material/NotificationsRounded";
+import ChatRoundedIcon from "@mui/icons-material/ChatRounded";
+import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import {
   Box, Button, Card, CardContent, Container,
-  Divider, Stack, Typography,
+  Divider, IconButton, Stack, Tooltip, Typography,
 } from "@mui/material";
 import { AppNavbar } from "@/components/navigation/app-navbar";
 import { fetchFromBackend } from "@/lib/backend-api";
@@ -18,7 +20,7 @@ import { getToken } from "@/lib/auth-storage";
 
 interface Notification {
   id: number;
-  type: "group_added" | "expense_added" | "payment_request" | "payment_received" | "payment_failed";
+  type: "group_added" | "expense_added" | "payment_request" | "payment_received" | "payment_failed" | "chat_message";
   title: string;
   body: string;
   read: boolean;
@@ -41,6 +43,7 @@ function NotifIcon({ type }: { type: Notification["type"] }) {
   if (type === "payment_request") return <RequestQuoteRoundedIcon sx={{ ...sx, color: "#f07a2b" }} />;
   if (type === "payment_received") return <PaymentsRoundedIcon sx={{ ...sx, color: "#27ae60" }} />;
   if (type === "payment_failed") return <ErrorOutlineRoundedIcon sx={{ ...sx, color: "#e74c3c" }} />;
+  if (type === "chat_message") return <ChatRoundedIcon sx={{ ...sx, color: "#a78bfa" }} />;
   return <NotificationsRoundedIcon sx={sx} />;
 }
 
@@ -85,6 +88,29 @@ export function NotificationsPage() {
     }
   }
 
+  async function handleDelete(id: number) {
+    if (!token) return;
+    const updated = notifications.filter((n) => n.id !== id);
+    setNotifications(updated);
+    dispatchCountChanged(updated);
+    try {
+      await fetchFromBackend(`/notifications/${id}`, { method: "DELETE", token });
+    } catch {
+      // silent fail
+    }
+  }
+
+  async function handleDeleteAll() {
+    if (!token) return;
+    setNotifications([]);
+    dispatchCountChanged([]);
+    try {
+      await fetchFromBackend("/notifications", { method: "DELETE", token });
+    } catch {
+      // silent fail
+    }
+  }
+
   async function handleMarkRead(id: number) {
     if (!token) return;
     const updated = notifications.map((n) => n.id === id ? { ...n, read: true } : n);
@@ -100,15 +126,19 @@ export function NotificationsPage() {
   function handleNotifClick(notif: Notification) {
     void handleMarkRead(notif.id);
     if (notif.groupId) {
-      const tab = notif.type === "payment_request" || notif.type === "payment_received" || notif.type === "payment_failed"
-        ? "?tab=settlements"
-        : "";
-      router.push(`/groups/${notif.groupId}${tab}`);
+      if (notif.type === "chat_message") {
+        router.push(`/groups/${notif.groupId}/chat`);
+      } else {
+        const tab = notif.type === "payment_request" || notif.type === "payment_received" || notif.type === "payment_failed"
+          ? "?tab=settlements"
+          : "";
+        router.push(`/groups/${notif.groupId}${tab}`);
+      }
     }
   }
 
   return (
-    <Box sx={{ minHeight: "100vh", background: "linear-gradient(96deg, rgba(248,233,255,0.92) 0%, rgba(238,225,255,0.9) 52%, rgba(227,246,255,0.9) 100%)" }}>
+    <Box sx={{ minHeight: "100vh", background: "transparent" }}>
       <AppNavbar />
       <Container maxWidth="lg" sx={{ py: { xs: 3, md: 5 } }}>
         <Stack spacing={3}>
@@ -121,17 +151,28 @@ export function NotificationsPage() {
                 </Box>
               )}
             </Typography>
-            {unreadCount > 0 && (
-              <Button
-                onClick={() => void handleMarkAllRead()}
-                sx={{ fontWeight: 700, textTransform: "none", color: "#6f29c6" }}
-              >
-                Mark all read
-              </Button>
-            )}
+            <Stack direction="row" spacing={1}>
+              {notifications.length > 0 && unreadCount > 0 && (
+                <Button
+                  onClick={() => void handleMarkAllRead()}
+                  sx={{ fontWeight: 700, textTransform: "none", color: "#a78bfa" }}
+                >
+                  Mark all read
+                </Button>
+              )}
+              {notifications.length > 0 && (
+                <Button
+                  onClick={() => void handleDeleteAll()}
+                  sx={{ fontWeight: 700, textTransform: "none", color: "#e74c3c" }}
+                  startIcon={<DeleteOutlineRoundedIcon />}
+                >
+                  Delete all
+                </Button>
+              )}
+            </Stack>
           </Stack>
 
-          <Card sx={{ borderRadius: 2, bgcolor: "rgba(255,255,255,0.88)", overflow: "hidden" }}>
+          <Card sx={{ borderRadius: 2, bgcolor: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", overflow: "hidden" }}>
             {loading ? (
               <CardContent sx={{ textAlign: "center", py: 5 }}>
                 <Typography sx={{ color: "text.secondary" }}>Loading...</Typography>
@@ -150,8 +191,8 @@ export function NotificationsPage() {
                       px: 2.5,
                       py: 2,
                       cursor: notif.groupId ? "pointer" : "default",
-                      bgcolor: notif.read ? "transparent" : "rgba(111,41,198,0.05)",
-                      "&:hover": { bgcolor: notif.groupId ? "rgba(111,41,198,0.08)" : notif.read ? "transparent" : "rgba(111,41,198,0.05)" },
+                      bgcolor: notif.read ? "transparent" : "rgba(167,139,250,0.08)",
+                      "&:hover": { bgcolor: notif.groupId ? "rgba(167,139,250,0.12)" : notif.read ? "transparent" : "rgba(167,139,250,0.08)" },
                       transition: "background 0.15s",
                     }}
                   >
@@ -161,7 +202,7 @@ export function NotificationsPage() {
                           width: 44,
                           height: 44,
                           borderRadius: "50%",
-                          bgcolor: "rgba(111,41,198,0.08)",
+                          bgcolor: "rgba(167,139,250,0.12)",
                           display: "grid",
                           placeItems: "center",
                           flexShrink: 0,
@@ -174,27 +215,36 @@ export function NotificationsPage() {
                           <Typography sx={{ fontWeight: notif.read ? 600 : 800, fontSize: 15 }}>
                             {notif.title}
                           </Typography>
-                          <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexShrink: 0, ml: 1 }}>
+                          <Stack direction="row" spacing={0.5} sx={{ alignItems: "center", flexShrink: 0, ml: 1 }}>
                             <Typography variant="caption" sx={{ color: "text.disabled", whiteSpace: "nowrap" }}>
                               {timeAgo(notif.createdAt)}
                             </Typography>
                             {!notif.read && (
-                              <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "#6f29c6", flexShrink: 0 }} />
+                              <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "#a78bfa", flexShrink: 0 }} />
                             )}
+                            <Tooltip title="Delete">
+                              <IconButton
+                                size="small"
+                                onClick={(e) => { e.stopPropagation(); void handleDelete(notif.id); }}
+                                sx={{ color: "text.disabled", "&:hover": { color: "#e74c3c" } }}
+                              >
+                                <DeleteOutlineRoundedIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
                           </Stack>
                         </Stack>
                         <Typography variant="body2" sx={{ color: "text.secondary", mt: 0.4, lineHeight: 1.5 }}>
                           {notif.body}
                         </Typography>
                         {notif.groupId && !notif.read && (
-                          <Typography variant="caption" sx={{ color: "#6f29c6", fontWeight: 700, mt: 0.5, display: "block" }}>
+                          <Typography variant="caption" sx={{ color: "#a78bfa", fontWeight: 700, mt: 0.5, display: "block" }}>
                             Tap to view →
                           </Typography>
                         )}
                       </Box>
                     </Stack>
                   </Box>
-                  {index < notifications.length - 1 && <Divider />}
+                  {index < notifications.length - 1 && <Divider sx={{ borderColor: "rgba(255,255,255,0.07)" }} />}
                 </Box>
               ))
             )}

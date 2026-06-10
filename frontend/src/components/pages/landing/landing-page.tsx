@@ -36,6 +36,9 @@ const featureCards = [
 const floatingBubbles = [
   {
     label: "Easy splitting",
+    color: "#e83ea8",
+    bg: "linear-gradient(135deg, rgba(232,62,168,0.45), rgba(139,92,246,0.45))",
+    shadow: "0 14px 34px rgba(232,62,168,0.25)",
     sx: {
       top: { xs: 20, md: 8 },
       left: { xs: 16, md: -18 },
@@ -44,6 +47,9 @@ const floatingBubbles = [
   },
   {
     label: "Financial education",
+    color: "#56c9ef",
+    bg: "linear-gradient(135deg, rgba(86,201,239,0.45), rgba(111,41,198,0.45))",
+    shadow: "0 14px 34px rgba(86,201,239,0.2)",
     sx: {
       top: { xs: 52, md: 32 },
       right: { xs: 14, md: -20 },
@@ -52,6 +58,9 @@ const floatingBubbles = [
   },
   {
     label: "No stress over money",
+    color: "#34d399",
+    bg: "linear-gradient(135deg, rgba(52,211,153,0.45), rgba(86,201,239,0.45))",
+    shadow: "0 14px 34px rgba(52,211,153,0.2)",
     sx: {
       bottom: { xs: 26, md: -6 },
       left: { xs: "50%", md: 120 },
@@ -176,7 +185,7 @@ export function LandingPage() {
   }, []);
 
   return (
-    <Box sx={{ minHeight: "100vh", background: "linear-gradient(104deg, #f9e6ff 0%, #f0dcff 40%, #ddf5ff 100%)" }}>
+    <Box sx={{ minHeight: "100vh", background: "transparent" }}>
       {showIntro ? <IntroSplash /> : null}
 
       <Box
@@ -213,11 +222,11 @@ export function LandingPage() {
                     ✨ Shared expenses, made simple
                   </Typography>
 
-                  <Typography sx={{ fontFamily: "Georgia, Times New Roman, serif", fontSize: { xs: 44, md: 58 }, lineHeight: 0.98, color: "#3b2366", fontWeight: 700 }}>
+                  <Typography sx={{ fontFamily: "Georgia, Times New Roman, serif", fontSize: { xs: 44, md: 58 }, lineHeight: 0.98, color: "white", fontWeight: 700 }}>
                     Split bills, not friendships
                   </Typography>
 
-                  <Typography sx={{ fontSize: { xs: 20, md: 24 }, color: "#675e84", lineHeight: 1.55, maxWidth: 610 }}>
+                  <Typography sx={{ fontSize: { xs: 20, md: 24 }, color: "rgba(255,255,255,0.72)", lineHeight: 1.55, maxWidth: 610 }}>
                     SplitMates helps students and friends track shared expenses, spot bad spending habits, and get a clearer idea of what next month might look like. Use it for rent, groceries, weekends out, study breaks, or any shared cost you want to keep track of.
                   </Typography>
 
@@ -292,14 +301,14 @@ export function LandingPage() {
                         display: "inline-flex",
                         position: "absolute",
                         zIndex: 2,
-                        bgcolor: "rgba(255,255,255,0.9)",
-                        border: "1px solid rgba(164, 73, 216, 0.26)",
-                        boxShadow: "0 14px 34px rgba(131, 58, 179, 0.18)",
-                        backdropFilter: "blur(4px)",
+                        background: bubble.bg,
+                        border: `1px solid ${bubble.color}60`,
+                        boxShadow: bubble.shadow,
+                        backdropFilter: "blur(8px)",
                         fontSize: { xs: 16, md: 21 },
                         height: { xs: 42, md: 50 },
                         px: { xs: 1.2, md: 1.4 },
-                        "& .MuiChip-label": { px: { xs: 1.4, md: 1.8 }, fontWeight: 700, color: "#5a3a88" },
+                        "& .MuiChip-label": { px: { xs: 1.4, md: 1.8 }, fontWeight: 800, color: "white" },
                         ...bubble.sx,
                       }}
                     />
@@ -318,15 +327,16 @@ export function LandingPage() {
                     fontSize: { xs: 26, md: 34 },
                     fontWeight: 800,
                     boxShadow: "none",
+                    mt: { xs: 4, md: 6 },
                     "&:hover": { background: "linear-gradient(90deg, #d83799, #6526b2)", boxShadow: "none" },
                   }}
                 >
                   Get started
                 </Button>
 
-                <Typography sx={{ fontSize: { xs: 19, md: 24 }, color: "#655a85" }}>
+                <Typography sx={{ fontSize: { xs: 19, md: 24 }, color: "rgba(255,255,255,0.65)" }}>
                   Already have an account?{" "}
-                  <Box component={Link} href="/login" sx={{ color: "#6f29c6", fontWeight: 800, textDecoration: "none" }}>
+                  <Box component={Link} href="/login" sx={{ color: "#e83ea8", fontWeight: 800, textDecoration: "none" }}>
                     Log in
                   </Box>
                 </Typography>

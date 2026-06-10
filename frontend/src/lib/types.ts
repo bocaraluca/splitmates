@@ -1,11 +1,12 @@
 export type Id = number;
 
 export const GROUP_CATEGORIES = ["household", "trip", "friends", "family", "roommates", "other"] as const;
-export const EXPENSE_CATEGORIES = ["rent", "groceries", "utilities", "transport", "entertainment", "food", "other"] as const;
+export const EXPENSE_CATEGORIES = ["rent", "groceries", "utilities", "transport", "entertainment", "food", "other", "alcohol", "gambling", "smoking", "fast_food", "luxury", "online_shopping", "subscriptions"] as const;
 export const SPLIT_TYPES = ["equal", "custom"] as const;
 
 export type GroupCategory = (typeof GROUP_CATEGORIES)[number];
 export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number];
+export const BAD_HABIT_CATEGORIES: ExpenseCategory[] = ["alcohol", "gambling", "smoking", "fast_food", "luxury", "online_shopping", "subscriptions"];
 export type SplitType = (typeof SPLIT_TYPES)[number];
 
 export interface User {
@@ -93,6 +94,7 @@ export interface ExpenseListItem {
   paidBy: User | null;
   category: ExpenseCategory;
   splitType: SplitType;
+  isBadHabit: boolean;
 }
 
 export interface ExpenseListResponse {

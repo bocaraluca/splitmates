@@ -813,7 +813,7 @@ export function AdminPage() {
 
   if (!authReady) {
     return (
-      <Box sx={{ minHeight: "100vh", background: "linear-gradient(108deg, rgba(248,233,255,0.95) 0%, rgba(239,227,255,0.94) 50%, rgba(227,246,255,0.94) 100%)" }}>
+      <Box sx={{ minHeight: "100vh", background: "transparent" }}>
         <AppNavbar />
         <Container maxWidth="lg" sx={{ py: 5 }}>
           <Typography sx={{ color: "text.secondary" }}>Loading admin access...</Typography>
@@ -824,7 +824,7 @@ export function AdminPage() {
 
   if (!isAdmin) {
     return (
-      <Box sx={{ minHeight: "100vh", background: "linear-gradient(108deg, rgba(248,233,255,0.95) 0%, rgba(239,227,255,0.94) 50%, rgba(227,246,255,0.94) 100%)" }}>
+      <Box sx={{ minHeight: "100vh", background: "transparent" }}>
         <AppNavbar />
         <Container maxWidth="lg" sx={{ py: 5 }}>
           <Alert severity="error" sx={{ borderRadius: 2 }}>
@@ -836,7 +836,7 @@ export function AdminPage() {
   }
 
   return (
-    <Box sx={{ minHeight: "100vh", background: "linear-gradient(108deg, rgba(248,233,255,0.95) 0%, rgba(239,227,255,0.94) 50%, rgba(227,246,255,0.94) 100%)" }}>
+    <Box sx={{ minHeight: "100vh", background: "transparent" }}>
       <AppNavbar />
       <Container maxWidth="xl" sx={{ py: { xs: 3, md: 5 } }}>
         <Stack spacing={3}>

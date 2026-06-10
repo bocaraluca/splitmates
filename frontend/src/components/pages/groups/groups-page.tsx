@@ -60,9 +60,9 @@ function GroupCard({ group }: { group: GroupSummary }) {
       sx={{
         minHeight: 260,
         borderRadius: { xs: 2, md: 0 },
-        background: "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(252,246,255,0.9))",
-        border: "1px solid rgba(148, 71, 198, 0.16)",
-        boxShadow: "0 10px 24px rgba(121, 72, 180, 0.1)",
+        background: "rgba(255,255,255,0.06)",
+        border: "1px solid rgba(255,255,255,0.1)",
+        boxShadow: "0 10px 32px rgba(0,0,0,0.3)",
         position: "relative",
         width: "100%",
         minWidth: 0,
@@ -159,7 +159,7 @@ export function GroupsPage() {
   const shouldShowSections = isAdmin && allOtherGroups.length > 0;
 
   return (
-    <Box sx={{ minHeight: "100vh", background: "linear-gradient(108deg, rgba(248,233,255,0.95) 0%, rgba(239,227,255,0.94) 50%, rgba(227,246,255,0.94) 100%)", overflowX: "clip" }}>
+    <Box sx={{ minHeight: "100vh", background: "transparent", overflowX: "clip" }}>
       <AppNavbar />
       <Container maxWidth="xl" sx={{ py: { xs: 3, md: 5 }, px: { xs: 1.5, sm: 2, md: 4 } }}>
         <Stack spacing={3}>

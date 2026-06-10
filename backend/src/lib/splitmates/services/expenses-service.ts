@@ -1,4 +1,6 @@
 import type { Id, ExpenseCategory, ExpenseListResponse, ExpenseShare, SplitType } from "../model/types";
+
+const BAD_HABIT_CATEGORIES: ExpenseCategory[] = ["alcohol", "gambling", "smoking", "fast_food", "luxury", "online_shopping", "subscriptions"];
 import { emitEvent } from "../core/events";
 import { buildEqualShares, normalizeShares, roundMoney } from "../core/math";
 import { prisma } from "@/lib/prisma";
@@ -98,6 +100,7 @@ export async function getExpenses(groupId: Id, page: number, pageSize: number, s
       },
       category: expense.category,
       splitType: expense.splitType,
+      isBadHabit: expense.isBadHabit,
     })),
     page: safePage,
     pageSize,
@@ -135,6 +138,7 @@ export async function createExpense(groupId: Id, actorUserId: Id, input: Expense
       title: input.title,
       amount: normalizedAmount,
       category: input.category,
+      isBadHabit: BAD_HABIT_CATEGORIES.includes(input.category),
       date: new Date(input.date),
       paidByUserId: input.paidByUserId,
       splitType: input.splitType,
@@ -211,6 +215,7 @@ export async function updateExpense(groupId: Id, expenseId: Id, actorUserId: Id,
       title: input.title,
       amount: normalizedAmount,
       category: input.category,
+      isBadHabit: BAD_HABIT_CATEGORIES.includes(input.category),
       date: new Date(input.date),
       paidByUserId: input.paidByUserId,
       splitType: input.splitType,

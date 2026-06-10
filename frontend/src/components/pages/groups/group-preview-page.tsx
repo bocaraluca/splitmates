@@ -479,7 +479,7 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
     <Box
       sx={{
         minHeight: "100vh",
-        background: "linear-gradient(96deg, rgba(248,233,255,0.92) 0%, rgba(238,225,255,0.9) 52%, rgba(227,246,255,0.9) 100%)",
+        background: "transparent",
         overflowX: "clip",
       }}
     >
@@ -557,14 +557,14 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
                     fontWeight: 900,
                     textTransform: "none",
                     borderColor: "#e83ea8",
-                    color: "#b42352",
-                    bgcolor: "rgba(255,255,255,0.88)",
+                    color: "#e83ea8",
+                    bgcolor: "rgba(232,62,168,0.08)",
                     mt: 1.2,
                     whiteSpace: "nowrap",
                     alignSelf: "flex-start",
                     "&:hover": {
                       borderColor: "#d9369b",
-                      bgcolor: "rgba(255,235,246,0.92)",
+                      bgcolor: "rgba(232,62,168,0.18)",
                     },
                   }}
                   onClick={() => router.push(`/groups/${groupId}/edit`)}
@@ -685,9 +685,9 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
 
           {tabValue === "expenses" && (
             <Box sx={{ display: "grid", gap: 2, alignItems: "start", gridTemplateColumns: { xs: "1fr", lg: "minmax(0, 1.55fr) minmax(300px, 0.8fr)" } }}>
-              <Card sx={{ borderRadius: 1.5, background: "rgba(255,255,255,0.82)" }}>
+              <Card sx={{ borderRadius: 1.5, background: "rgba(255,255,255,0.05)" }}>
                 <CardContent sx={{ p: 0 }}>
-                  <Stack direction={{ xs: "column", md: "row" }} spacing={1.1} sx={{ p: 1.5, borderBottom: "1px solid rgba(46,58,86,0.1)" }}>
+                  <Stack direction={{ xs: "column", md: "row" }} spacing={1.1} sx={{ p: 1.5, borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
                     <FormControl size="small" sx={{ minWidth: { xs: "100%", md: 150 } }}>
                       <InputLabel id="expense-category-label">Category</InputLabel>
                       <Select
@@ -785,7 +785,12 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
                         {expenseItems.map((expense) => (
                           <TableRow key={expense.id} hover>
                             <TableCell>
-                              <Typography sx={{ fontWeight: 600 }}>{expense.title}</Typography>
+                              <Stack direction="row" spacing={0.8} sx={{ alignItems: "center" }}>
+                                <Typography sx={{ fontWeight: 600 }}>{expense.title}</Typography>
+                                {expense.isBadHabit && (
+                                  <Box component="span" title="Bad habit" sx={{ fontSize: 14, lineHeight: 1 }}>🔥</Box>
+                                )}
+                              </Stack>
                               <Typography variant="caption" sx={{ color: "text.secondary" }}>
                                 {formatDate(expense.date)}
                               </Typography>
@@ -835,12 +840,15 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
 
                   <Stack spacing={1.2} sx={{ display: { xs: "block", md: "none" }, p: 1.5 }}>
                     {expenseItems.map((expense) => (
-                      <Card key={expense.id} sx={{ borderRadius: 1.5, bgcolor: "rgba(255,255,255,0.95)", border: "1px solid rgba(46,58,86,0.08)" }}>
+                      <Card key={expense.id} sx={{ borderRadius: 1.5, bgcolor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
                         <CardContent sx={{ p: 1.6 }}>
                           <Stack spacing={1}>
                             <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1.2, alignItems: "flex-start" }}>
                               <Box sx={{ minWidth: 0 }}>
-                                <Typography sx={{ fontWeight: 800, fontSize: 18, lineHeight: 1.15 }}>{expense.title}</Typography>
+                                <Stack direction="row" spacing={0.6} sx={{ alignItems: "center" }}>
+                                  <Typography sx={{ fontWeight: 800, fontSize: 18, lineHeight: 1.15 }}>{expense.title}</Typography>
+                                  {expense.isBadHabit && <Box component="span" sx={{ fontSize: 16 }}>🔥</Box>}
+                                </Stack>
                                 <Typography variant="caption" sx={{ color: "text.secondary" }}>
                                   {formatDate(expense.date)}
                                 </Typography>
@@ -908,29 +916,29 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
               </Card>
 
               <Stack spacing={2}>
-                <Card sx={{ borderRadius: 1.5, bgcolor: "rgba(255, 233, 238, 0.86)" }}>
+                <Card sx={{ borderRadius: 1.5, bgcolor: "rgba(232,62,168,0.15)", border: "1px solid rgba(232,62,168,0.2)" }}>
                   <CardContent sx={{ py: 3.2, textAlign: "center" }}>
-                    <Typography sx={{ color: "#9b9b9b", fontWeight: 800, letterSpacing: "0.08em" }}>TOTAL SPENT</Typography>
-                    <Typography sx={{ mt: 1, fontSize: { xs: 34, md: 46 }, lineHeight: 1, color: "#e988a2", fontWeight: 900 }}>
+                    <Typography sx={{ color: "rgba(255,255,255,0.5)", fontWeight: 800, letterSpacing: "0.08em", fontSize: 11 }}>TOTAL SPENT</Typography>
+                    <Typography sx={{ mt: 1, fontSize: { xs: 34, md: 46 }, lineHeight: 1, color: "#e83ea8", fontWeight: 900 }}>
                       {Math.round(stats?.totalSpent ?? 0)}
                     </Typography>
-                    <Typography sx={{ color: "#8c8c8c", fontWeight: 600 }}>RON</Typography>
+                    <Typography sx={{ color: "rgba(255,255,255,0.45)", fontWeight: 600 }}>RON</Typography>
                   </CardContent>
                 </Card>
 
-                <Card sx={{ borderRadius: 1.5, bgcolor: "rgba(227, 241, 252, 0.9)" }}>
+                <Card sx={{ borderRadius: 1.5, bgcolor: "rgba(86,201,239,0.15)", border: "1px solid rgba(86,201,239,0.2)" }}>
                   <CardContent sx={{ py: 3.2, textAlign: "center" }}>
-                    <Typography sx={{ color: "#9b9b9b", fontWeight: 800, letterSpacing: "0.08em" }}>MOST EXPENSIVE</Typography>
-                    <Typography sx={{ mt: 1.2, color: "#2f78c9", fontSize: { xs: 30, md: 38 }, lineHeight: 1, fontWeight: 900 }}>
+                    <Typography sx={{ color: "rgba(255,255,255,0.5)", fontWeight: 800, letterSpacing: "0.08em", fontSize: 11 }}>MOST EXPENSIVE</Typography>
+                    <Typography sx={{ mt: 1.2, color: "#56c9ef", fontSize: { xs: 30, md: 38 }, lineHeight: 1, fontWeight: 900 }}>
                       {readableCategory(stats?.mostExpensiveCategory ?? "other")}
                     </Typography>
-                    <Typography sx={{ color: "#7c8ea5", fontWeight: 600 }}>
+                    <Typography sx={{ color: "rgba(255,255,255,0.45)", fontWeight: 600 }}>
                       {formatMoney(stats?.topCategoryAmount ?? 0)}
                     </Typography>
                   </CardContent>
                 </Card>
 
-                <Card sx={{ borderRadius: 1.5, background: "rgba(255,255,255,0.82)" }}>
+                <Card sx={{ borderRadius: 1.5, background: "rgba(255,255,255,0.05)" }}>
                   <CardContent>
                     <Typography variant="h5" sx={{ fontWeight: 800 }}>
                       Spending by Category
@@ -962,7 +970,7 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
                   </CardContent>
                 </Card>
 
-                <Card sx={{ borderRadius: 1.5, background: "rgba(255,255,255,0.82)" }}>
+                <Card sx={{ borderRadius: 1.5, background: "rgba(255,255,255,0.05)" }}>
                   <CardContent>
                     <Typography variant="h5" sx={{ fontWeight: 800 }}>
                       Expenses by Month (Last 6 Months)
@@ -987,7 +995,7 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
                               key={month.month}
                               sx={{
                                 borderRadius: 1.2,
-                                bgcolor: "rgba(124,168,217,0.12)",
+                                bgcolor: "rgba(255,255,255,0.05)",
                                 p: 1,
                                 minWidth: 0,
                               }}
@@ -997,7 +1005,7 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
                                   sx={{
                                     width: "70%",
                                     height,
-                                    bgcolor: "#7ca8d9",
+                                    bgcolor: "#56c9ef",
                                     borderRadius: 0.6,
                                     transition: "height 220ms ease",
                                   }}
@@ -1035,7 +1043,7 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
                                   sx={{
                                     width: "78%",
                                     height,
-                                    bgcolor: "#7ca8d9",
+                                    bgcolor: "#56c9ef",
                                     borderRadius: 0.6,
                                     transition: "height 220ms ease",
                                   }}
@@ -1059,7 +1067,7 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
           {tabValue === "settlements" && (
             <Stack spacing={3}>
               {paySuccess && (
-                <Typography sx={{ color: "#27ae60", fontWeight: 700, bgcolor: "rgba(39,174,96,0.08)", px: 2, py: 1.2, borderRadius: 2 }}>
+                <Typography sx={{ color: "#34d399", fontWeight: 700, bgcolor: "rgba(52,211,153,0.1)", px: 2, py: 1.2, borderRadius: 2 }}>
                   ✓ {paySuccess}
                 </Typography>
               )}
@@ -1069,7 +1077,7 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
 
               {/* Net balance summary */}
               <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr 1fr" } }}>
-                <Card sx={{ borderRadius: 1.5, bgcolor: "rgba(255,233,238,0.86)" }}>
+                <Card sx={{ borderRadius: 1.5, bgcolor: "rgba(232,62,168,0.15)", border: "1px solid rgba(232,62,168,0.2)" }}>
                   <CardContent sx={{ textAlign: "center", py: 3 }}>
                     <Typography sx={{ color: "#9b9b9b", fontWeight: 800, letterSpacing: "0.08em", fontSize: 12 }}>YOU OWE</Typography>
                     <Typography sx={{ mt: 1, fontSize: 36, fontWeight: 900, color: "#e74c3c", lineHeight: 1 }}>
@@ -1077,7 +1085,7 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
                     </Typography>
                   </CardContent>
                 </Card>
-                <Card sx={{ borderRadius: 1.5, bgcolor: "rgba(227,252,238,0.86)" }}>
+                <Card sx={{ borderRadius: 1.5, bgcolor: "rgba(52,211,153,0.15)", border: "1px solid rgba(52,211,153,0.2)" }}>
                   <CardContent sx={{ textAlign: "center", py: 3 }}>
                     <Typography sx={{ color: "#9b9b9b", fontWeight: 800, letterSpacing: "0.08em", fontSize: 12 }}>OWED TO YOU</Typography>
                     <Typography sx={{ mt: 1, fontSize: 36, fontWeight: 900, color: "#27ae60", lineHeight: 1 }}>
@@ -1085,7 +1093,7 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
                     </Typography>
                   </CardContent>
                 </Card>
-                <Card sx={{ borderRadius: 1.5, bgcolor: "rgba(227,241,252,0.9)" }}>
+                <Card sx={{ borderRadius: 1.5, bgcolor: "rgba(86,201,239,0.15)", border: "1px solid rgba(86,201,239,0.2)" }}>
                   <CardContent sx={{ textAlign: "center", py: 3 }}>
                     <Typography sx={{ color: "#9b9b9b", fontWeight: 800, letterSpacing: "0.08em", fontSize: 12 }}>NET</Typography>
                     <Typography sx={{ mt: 1, fontSize: 36, fontWeight: 900, color: (balances?.net ?? 0) >= 0 ? "#27ae60" : "#e74c3c", lineHeight: 1 }}>
@@ -1101,7 +1109,7 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
                   <Typography variant="h5" sx={{ fontWeight: 800, mb: 1.5 }}>You owe</Typography>
                   <Stack spacing={1.5}>
                     {balances!.youOweTo.map((b) => (
-                      <Card key={b.userId} sx={{ borderRadius: 1.5, bgcolor: "rgba(255,255,255,0.88)", border: "1.5px solid rgba(231,76,60,0.18)" }}>
+                      <Card key={b.userId} sx={{ borderRadius: 1.5, bgcolor: "rgba(255,255,255,0.06)", border: "1px solid rgba(248,113,113,0.3)" }}>
                         <CardContent sx={{ p: 2.2 }}>
                           <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} sx={{ alignItems: { sm: "center" }, justifyContent: "space-between" }}>
                             <Box>
@@ -1151,7 +1159,7 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
                   <Typography variant="h5" sx={{ fontWeight: 800, mb: 1.5 }}>Owed to you</Typography>
                   <Stack spacing={1.5}>
                     {balances!.othersOweToYou.map((b) => (
-                      <Card key={b.userId} sx={{ borderRadius: 1.5, bgcolor: "rgba(255,255,255,0.88)", border: "1.5px solid rgba(39,174,96,0.18)" }}>
+                      <Card key={b.userId} sx={{ borderRadius: 1.5, bgcolor: "rgba(255,255,255,0.06)", border: "1px solid rgba(52,211,153,0.3)" }}>
                         <CardContent sx={{ p: 2.2 }}>
                           <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} sx={{ alignItems: { sm: "center" }, justifyContent: "space-between" }}>
                             <Box>
@@ -1191,7 +1199,7 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
 
           {tabValue === "members" && (
             <Stack spacing={2}>
-              <Card sx={{ borderRadius: 1.5, background: "rgba(255,255,255,0.82)" }}>
+              <Card sx={{ borderRadius: 1.5, background: "rgba(255,255,255,0.05)" }}>
                 <CardContent sx={{ p: 2.4 }}>
                   <Typography variant="h5" sx={{ fontWeight: 800, mb: 2 }}>
                     Add Member
@@ -1209,7 +1217,7 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
                       disabled={memberBusy || newMemberIdentifier.trim().length === 0}
                       sx={{
                         minWidth: 92,
-                        bgcolor: "#f09cae",
+                        bgcolor: "rgba(232,62,168,0.3)",
                         fontWeight: 800,
                         textTransform: "none",
                       }}
@@ -1230,7 +1238,7 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
                   const canDelete = Boolean(canManageGroup && !isAdmin);
 
                   return (
-                    <Card key={member.id} sx={{ borderRadius: 1.5, background: "rgba(255,255,255,0.82)" }}>
+                    <Card key={member.id} sx={{ borderRadius: 1.5, background: "rgba(255,255,255,0.05)" }}>
                       <CardContent sx={{ p: 2.4 }}>
                         <Stack direction="row" spacing={1.2} sx={{ justifyContent: "space-between", alignItems: "flex-start" }}>
                           <Box>
@@ -1238,7 +1246,7 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
                             <Typography sx={{ mt: 0.8, color: "text.secondary", fontSize: { xs: 15, md: 22 } }}>{member.email}</Typography>
                           </Box>
                           {isAdmin ? (
-                            <Chip label="Admin" sx={{ bgcolor: "#dcebff", color: "#2f78c9", fontWeight: 800 }} />
+                            <Chip label="Admin" sx={{ bgcolor: "rgba(86,201,239,0.15)", color: "#56c9ef", fontWeight: 800 }} />
                           ) : null}
                           {canDelete ? (
                             <Button

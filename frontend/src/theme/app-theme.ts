@@ -2,23 +2,23 @@ import { alpha, createTheme } from "@mui/material/styles";
 
 export const appTheme = createTheme({
   palette: {
-    mode: "light",
+    mode: "dark",
     primary: {
-      main: "#e83ea8",
+      main: "#d841aa",
       contrastText: "#ffffff",
     },
     secondary: {
       main: "#56c9ef",
     },
     background: {
-      default: "#faf5ff",
-      paper: "rgba(255, 255, 255, 0.9)",
+      default: "#120228",
+      paper: "rgba(255, 255, 255, 0.06)",
     },
     text: {
-      primary: "#2f2742",
-      secondary: "#675e84",
+      primary: "rgba(255, 255, 255, 0.93)",
+      secondary: "rgba(255, 255, 255, 0.55)",
     },
-    divider: alpha("#a047d8", 0.2),
+    divider: "rgba(255, 255, 255, 0.1)",
   },
   shape: {
     borderRadius: 20,
@@ -45,9 +45,10 @@ export const appTheme = createTheme({
     MuiCssBaseline: {
       styleOverrides: {
         body: {
-          background:
-            "radial-gradient(circle at top left, rgba(239, 86, 177, 0.2), transparent 30%), radial-gradient(circle at top right, rgba(95, 212, 244, 0.2), transparent 28%), linear-gradient(180deg, #fbf2ff 0%, #f4eaff 100%)",
-          color: "#2f2742",
+          background: "linear-gradient(135deg, #1a0533 0%, #2d0a4e 40%, #0f1a3d 100%) fixed",
+          backgroundAttachment: "fixed",
+          minHeight: "100vh",
+          color: "rgba(255,255,255,0.93)",
         },
         a: {
           color: "inherit",

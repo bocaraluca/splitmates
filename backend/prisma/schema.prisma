@@ -517,6 +517,7 @@ enum NotificationType {
   payment_request
   payment_received
   payment_failed
+  chat_message
 }
 
 model PaymentRequest {

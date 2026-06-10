@@ -1,6 +1,6 @@
 import { jsonError, jsonOk } from "@/lib/splitmates/api/http";
 import { getCurrentUserFromRequest } from "@/lib/splitmates";
-import { getNotifications, markAllAsRead } from "@/lib/splitmates/services/notification-service";
+import { getNotifications, markAllAsRead, deleteAllNotifications } from "@/lib/splitmates/services/notification-service";
 
 export const runtime = "nodejs";
 
@@ -18,4 +18,12 @@ export async function PATCH(request: Request) {
 
   await markAllAsRead(actor.id);
   return jsonOk({ message: "All notifications marked as read." });
+}
+
+export async function DELETE(request: Request) {
+  const actor = await getCurrentUserFromRequest(request);
+  if (!actor) return jsonError("Unauthorized.", 401);
+
+  await deleteAllNotifications(actor.id);
+  return jsonOk({ message: "All notifications deleted." });
 }

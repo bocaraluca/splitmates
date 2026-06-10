@@ -242,7 +242,7 @@ export function EditExpensePage({ groupId, expenseId }: { groupId: number; expen
       </Button>
       <Container maxWidth="md" sx={{ py: { xs: 3, md: 5 }, display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", position: "relative", zIndex: 1 }}>
         <Stack sx={{ width: "100%" }}>
-          <Card sx={{ borderRadius: 2, background: "rgba(255,255,255,0.96)", border: "1px solid rgba(148, 71, 198, 0.16)", boxShadow: "0 16px 36px rgba(121, 72, 180, 0.12)" }}>
+          <Card sx={{ borderRadius: 3, background: "rgba(10,5,30,0.72)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", border: "1px solid rgba(255,255,255,0.15)", boxShadow: "0 24px 60px rgba(0,0,0,0.4)" }}>
             <CardContent sx={{ p: { xs: 4, md: 6 } }}>
               <Typography variant="h2" sx={{ fontSize: { xs: 34, md: 44 }, fontWeight: 800, lineHeight: 1.05 }}>
                 {pageMode === "edit" ? "Edit expense" : "Add expense"}

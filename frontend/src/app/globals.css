@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f5f7ff;
-  --foreground: #23263a;
+  --background: #120228;
+  --foreground: rgba(255, 255, 255, 0.93);
   --muted: #677089;
   --panel: rgba(255, 255, 255, 0.82);
   --panel-strong: rgba(255, 255, 255, 0.95);
@@ -24,7 +24,8 @@ html {
 }
 
 body {
-  background: var(--background);
+  background: linear-gradient(135deg, #1a0533 0%, #2d0a4e 40%, #0f1a3d 100%) fixed;
+  background-attachment: fixed;
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }

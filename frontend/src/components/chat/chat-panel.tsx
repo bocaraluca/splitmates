@@ -290,10 +290,10 @@ export function ChatPanel({
 
   return (
     <Card
-      elevation={fullPage ? 0 : 2}
+      elevation={0}
       sx={{
-        borderRadius: fullPage ? 0 : 4,
-        background: fullPage ? "transparent" : "rgba(255,255,255,0.9)",
+        borderRadius: fullPage ? 0 : 3,
+        background: "transparent",
         width: "100%",
         flex: 1,
         display: "flex",
@@ -338,21 +338,21 @@ export function ChatPanel({
           {statusMessage ? <Alert severity="info" sx={{ borderRadius: 3 }}>{statusMessage}</Alert> : null}
 
           <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, alignItems: "center" }}>
-            <Chip 
-              label={onlineUsersLabel} 
-              sx={{ bgcolor: "rgba(255,255,255,0.6)", backdropFilter: "blur(4px)", color: "#351A5A", fontWeight: 600, border: "1px solid rgba(255,255,255,0.4)" }} 
+            <Chip
+              label={onlineUsersLabel}
+              sx={{ bgcolor: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.7)", fontWeight: 600, border: "1px solid rgba(255,255,255,0.12)" }}
             />
             {activeUsers.slice(0, 6).map((user) => (
-              <Chip 
-                key={user.userId} 
-                label={user.username} 
-                variant="outlined" 
-                sx={{ borderColor: "#DF449A", color: "#DF449A", fontWeight: 600, bgcolor: "rgba(255,255,255,0.4)", backdropFilter: "blur(4px)" }}
+              <Chip
+                key={user.userId}
+                label={user.username}
+                variant="outlined"
+                sx={{ borderColor: "rgba(232,62,168,0.5)", color: "#e83ea8", fontWeight: 600, bgcolor: "rgba(232,62,168,0.08)" }}
               />
             ))}
           </Box>
 
-          <Divider sx={{ borderColor: "rgba(53, 26, 90, 0.08)" }} />
+          <Divider sx={{ borderColor: "rgba(255,255,255,0.08)" }} />
 
           <Box
             id={`chat-scroll-${groupId}`}
@@ -366,7 +366,7 @@ export function ChatPanel({
               pr: 0.5,
               width: "100%",
               "&::-webkit-scrollbar": { width: "6px" },
-              "&::-webkit-scrollbar-thumb": { backgroundColor: "rgba(53, 26, 90, 0.15)", borderRadius: "10px" },
+              "&::-webkit-scrollbar-thumb": { backgroundColor: "rgba(255,255,255,0.15)", borderRadius: "10px" },
             }}
           >
             {page < totalPages ? (
@@ -409,21 +409,21 @@ export function ChatPanel({
                         px: 2,
                         py: 1.2,
                         // Update: Translucent glass bubble for other users
-                        bgcolor: isOwnMessage ? "#DF449A" : "rgba(255, 255, 255, 0.65)",
+                        bgcolor: isOwnMessage ? "#e83ea8" : "rgba(255,255,255,0.09)",
                         backdropFilter: isOwnMessage ? "none" : "blur(8px)",
-                        border: isOwnMessage ? "none" : "1px solid rgba(255, 255, 255, 0.8)",
-                        boxShadow: isOwnMessage 
-                          ? "0 4px 12px rgba(223, 68, 154, 0.2)" 
-                          : "0 4px 12px rgba(0, 0, 0, 0.03)",
-                        color: isOwnMessage ? "#FFFFFF" : "#351A5A",
+                        border: isOwnMessage ? "none" : "1px solid rgba(255,255,255,0.12)",
+                        boxShadow: isOwnMessage
+                          ? "0 4px 16px rgba(232,62,168,0.3)"
+                          : "0 2px 8px rgba(0,0,0,0.2)",
+                        color: "white",
                         width: "fit-content",
                       }}
                     >
                       <Stack direction="row" spacing={1} sx={{ alignItems: "center", mb: 0.5, flexWrap: "wrap" }}>
-                        <Typography sx={{ fontWeight: 800, fontSize: "0.85rem", color: isOwnMessage ? "rgba(255,255,255,0.9)" : "#351A5A" }}>
+                        <Typography sx={{ fontWeight: 800, fontSize: "0.85rem", color: isOwnMessage ? "rgba(255,255,255,0.9)" : "#a78bfa" }}>
                           {message.username}
                         </Typography>
-                        <Typography variant="caption" sx={{ color: isOwnMessage ? "rgba(255,255,255,0.7)" : "rgba(53, 26, 90, 0.6)", fontSize: "0.7rem" }}>
+                        <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.45)", fontSize: "0.7rem" }}>
                           {formatTime(message.createdAt)}
                         </Typography>
                         {isOwnMessage ? (
@@ -453,7 +453,7 @@ export function ChatPanel({
             spacing={1.5} 
             sx={{ 
               pt: 1.5,
-              borderTop: "1px solid rgba(53, 26, 90, 0.08)",
+              borderTop: "1px solid rgba(255,255,255,0.08)",
               alignItems: "flex-end"
             }}
           >
@@ -470,13 +470,13 @@ export function ChatPanel({
               sx={{
                 "& .MuiOutlinedInput-root": {
                   borderRadius: "24px",
-                  bgcolor: "rgba(255,255,255,0.65)", // Match the glass vibe
-                  backdropFilter: "blur(8px)",
-                  border: "1px solid rgba(255, 255, 255, 0.8)",
-                  color: "#351A5A",
+                  bgcolor: "rgba(255,255,255,0.07)",
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  color: "white",
                   "& fieldset": { border: "none" },
                   "&:hover fieldset": { border: "none" },
-                  "&.Mui-focused fieldset": { border: "1px solid #DF449A" },
+                  "&.Mui-focused fieldset": { border: "1px solid #e83ea8" },
+                  "& input::placeholder, & textarea::placeholder": { color: "rgba(255,255,255,0.35)" },
                 },
               }}
               onKeyDown={(e) => {

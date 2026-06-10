@@ -76,7 +76,7 @@ export function CreateGroupPage() {
       </Button>
       <Container maxWidth="md" sx={{ py: { xs: 3, md: 5 }, display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", position: "relative", zIndex: 1 }}>
         <Stack sx={{ width: "100%" }}>
-          <Card sx={{ borderRadius: 1, background: "rgba(255,255,255,0.9)", border: "1px solid rgba(148, 71, 198, 0.16)" }}>
+          <Card sx={{ borderRadius: 3, background: "rgba(10,5,30,0.72)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", border: "1px solid rgba(255,255,255,0.15)", boxShadow: "0 24px 60px rgba(0,0,0,0.4)" }}>
             <CardContent sx={{ p: { xs: 4, md: 6 } }}>
               <Typography variant="h3" sx={{ fontWeight: 900, lineHeight: 1.02 }}>
                 Create Group

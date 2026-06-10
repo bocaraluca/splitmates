@@ -20,7 +20,7 @@ function BalanceList({ title, entries, amountColor, emptyText, keyPrefix }: {
   keyPrefix: string;
 }) {
   return (
-    <Card sx={{ borderRadius: 1, background: "rgba(255,255,255,0.9)", border: "1px solid rgba(31,53,86,0.08)" }}>
+    <Card sx={{ borderRadius: 2, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
       <CardContent sx={{ p: 3 }}>
         <Typography variant="h6" sx={{ fontWeight: 800, mb: 1.4 }}>
           {title}
@@ -33,7 +33,7 @@ function BalanceList({ title, entries, amountColor, emptyText, keyPrefix }: {
           {entries.map((balance) => (
             <Box
               key={`${keyPrefix}-${balance.userId}`}
-              sx={{ py: 0.8, borderBottom: "1px solid rgba(26,45,74,0.08)", display: "flex", justifyContent: "space-between", gap: 1.2 }}
+              sx={{ py: 0.8, borderBottom: "1px solid rgba(255,255,255,0.07)", display: "flex", justifyContent: "space-between", gap: 1.2 }}
             >
               <Box>
                 <Typography sx={{ fontWeight: 700 }}>{balance.username}</Typography>
@@ -104,20 +104,20 @@ export function DashboardPage() {
     {
       label: "Total Spent",
       value: formatMoney(dashboard?.overall.totalSpent ?? 0),
-      tone: "#1f5f9f",
-      bg: "rgba(225, 238, 253, 0.95)",
+      tone: "#60a5fa",
+      accent: "rgba(96,165,250,0.15)",
     },
     {
       label: "Owed To You",
       value: formatMoney(dashboard?.overall.totalOwedToYou ?? 0),
-      tone: "#1e7f5a",
-      bg: "rgba(224, 246, 236, 0.95)",
+      tone: "#34d399",
+      accent: "rgba(52,211,153,0.15)",
     },
     {
       label: "You Owe",
       value: formatMoney(dashboard?.overall.totalYouOwe ?? 0),
-      tone: "#be5f30",
-      bg: "rgba(255, 238, 224, 0.95)",
+      tone: "#fb923c",
+      accent: "rgba(251,146,60,0.15)",
     },
   ];
 
@@ -125,13 +125,13 @@ export function DashboardPage() {
     <Box
       sx={{
         minHeight: "100vh",
-        background: "linear-gradient(105deg, rgba(248,233,255,0.95) 0%, rgba(241,226,255,0.94) 44%, rgba(227,246,255,0.94) 100%)",
+        background: "transparent",
       }}
     >
       <AppNavbar />
       <Container maxWidth="xl" sx={{ py: { xs: 3, md: 5 } }}>
         <Stack spacing={2.4}>
-          <Box sx={{ pb: 1.3, borderBottom: "1px solid rgba(23,49,84,0.13)" }}>
+          <Box sx={{ pb: 1.3, borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
             <Typography variant="h2" sx={{ fontSize: { xs: 42, md: 58 }, fontWeight: 900, lineHeight: 0.96 }}>
               Dashboard
             </Typography>
@@ -143,9 +143,9 @@ export function DashboardPage() {
 
           <Box sx={{ display: "grid", gap: 1.4, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", lg: "repeat(4, 1fr)" } }}>
             {overviewStats.map((stat) => (
-              <Card key={stat.label} sx={{ borderRadius: 1, background: "rgba(255,255,255,0.86)", border: "1px solid rgba(143,73,194,0.16)" }}>
+              <Card key={stat.label} sx={{ borderRadius: 2, background: stat.accent, border: `1px solid ${stat.tone}30` }}>
                 <CardContent sx={{ px: 2.2, py: 2 }}>
-                  <Typography sx={{ color: "#7f8ca2", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", fontSize: 12 }}>
+                  <Typography sx={{ color: "rgba(255,255,255,0.55)", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", fontSize: 11 }}>
                     {stat.label}
                   </Typography>
                   <Typography sx={{ mt: 0.7, color: stat.tone, fontSize: { xs: 28, md: 34 }, fontWeight: 900, lineHeight: 1.05 }}>
@@ -160,20 +160,20 @@ export function DashboardPage() {
             <BalanceList
               title="You Owe"
               entries={dashboard?.overall.youOweTo ?? []}
-              amountColor="#b14a63"
+              amountColor="#f87171"
               emptyText="You currently owe no one."
               keyPrefix="owe"
             />
             <BalanceList
               title="Owes You"
               entries={dashboard?.overall.othersOweToYou ?? []}
-              amountColor="#1e7f5a"
+              amountColor="#34d399"
               emptyText="No one owes you right now."
               keyPrefix="owed"
             />
           </Stack>
 
-          <Card sx={{ borderRadius: 1, background: "rgba(255,255,255,0.9)", border: "1px solid rgba(31,53,86,0.08)" }}>
+          <Card sx={{ borderRadius: 2, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
             <CardContent sx={{ p: 3 }}>
               <Typography variant="h5" sx={{ fontWeight: 800, mb: 2 }}>
                 Group Balances
@@ -188,7 +188,7 @@ export function DashboardPage() {
                   const membersCount = fullGroup?.members.filter(Boolean).length ?? 0;
 
                   return (
-                    <Box key={groupBalance.groupId} sx={{ p: 1.6, border: "1px solid rgba(34,58,90,0.1)", borderRadius: 1, bgcolor: "rgba(247,251,255,0.9)" }}>
+                    <Box key={groupBalance.groupId} sx={{ p: 1.6, border: "1px solid rgba(255,255,255,0.08)", borderRadius: 2, bgcolor: "rgba(255,255,255,0.04)" }}>
                       <Stack
                         direction={{ xs: "column", md: "row" }}
                         spacing={1.4}
@@ -202,7 +202,7 @@ export function DashboardPage() {
                         </Box>
 
                         <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "wrap" }}>
-                          <Chip label={`Spent ${formatMoney(groupBalance.totalSpent)}`} sx={{ bgcolor: "rgba(58,120,191,0.12)", color: "#2a5f9e", fontWeight: 700 }} />
+                          <Chip label={`Spent ${formatMoney(groupBalance.totalSpent)}`} sx={{ bgcolor: "rgba(96,165,250,0.15)", color: "#60a5fa", fontWeight: 700 }} />
                           <Button component={Link} href={`/groups/${groupBalance.groupId}`} variant="outlined" sx={{ borderRadius: 1 }}>
                             Open
                           </Button>

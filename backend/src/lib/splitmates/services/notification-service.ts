@@ -117,3 +117,39 @@ export async function markAllAsRead(userId: Id) {
     data: { read: true },
   });
 }
+
+export async function notifyChatMessage(
+  memberIds: Id[],
+  senderId: Id,
+  groupId: Id,
+  groupName: string,
+  senderUsername: string,
+  preview: string,
+) {
+  await Promise.all(
+    memberIds
+      .filter((id) => Number(id) !== Number(senderId))
+      .map((userId) =>
+        create({
+          userId,
+          type: "chat_message",
+          title: `New message in ${groupName}`,
+          body: `${senderUsername}: ${preview.length > 60 ? preview.slice(0, 60) + "…" : preview}`,
+          groupId,
+          fromUserId: senderId,
+        })
+      )
+  );
+}
+
+export async function deleteNotification(notificationId: Id, userId: Id) {
+  return prisma.notification.deleteMany({
+    where: { id: Number(notificationId), userId: Number(userId) },
+  });
+}
+
+export async function deleteAllNotifications(userId: Id) {
+  return prisma.notification.deleteMany({
+    where: { userId: Number(userId) },
+  });
+}

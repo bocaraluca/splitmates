@@ -167,9 +167,9 @@ export function SettingsPage() {
 
   if (loading) {
     return (
-      <Box sx={{ minHeight: "100vh", background: "linear-gradient(96deg, rgba(248,233,255,0.92) 0%, rgba(238,225,255,0.9) 52%, rgba(227,246,255,0.9) 100%)" }}>
+      <Box sx={{ minHeight: "100vh", background: "transparent" }}>
         <AppNavbar />
-        <Container maxWidth="sm" sx={{ py: 6, textAlign: "center" }}>
+        <Container maxWidth="md" sx={{ py: 6, textAlign: "center" }}>
           <Typography>Loading...</Typography>
         </Container>
       </Box>
@@ -177,22 +177,14 @@ export function SettingsPage() {
   }
 
   return (
-    <Box sx={{ minHeight: "100vh", background: "linear-gradient(96deg, rgba(248,233,255,0.92) 0%, rgba(238,225,255,0.9) 52%, rgba(227,246,255,0.9) 100%)" }}>
+    <Box sx={{ minHeight: "100vh", background: "transparent" }}>
       <AppNavbar />
-      <Container maxWidth="sm" sx={{ py: { xs: 3, md: 5 } }}>
+      <Container maxWidth="md" sx={{ py: { xs: 3, md: 5 } }}>
         <Stack spacing={3}>
-          <Button
-            startIcon={<ArrowBackRoundedIcon />}
-            onClick={() => router.back()}
-            sx={{ alignSelf: "flex-start", color: "#e79aaa", fontWeight: 700, textTransform: "none" }}
-          >
-            Back
-          </Button>
-
           <Typography variant="h3" sx={{ fontWeight: 900 }}>Settings</Typography>
 
           {/* Username */}
-          <Card sx={{ borderRadius: 2, bgcolor: "rgba(255,255,255,0.88)" }}>
+          <Card sx={{ borderRadius: 2, bgcolor: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}>
             <CardContent sx={{ p: 3 }}>
               <Typography variant="h6" sx={{ fontWeight: 800, mb: 2 }}>Username</Typography>
               <Stack spacing={1.5}>
@@ -222,7 +214,7 @@ export function SettingsPage() {
           <Divider />
 
           {/* Email */}
-          <Card sx={{ borderRadius: 2, bgcolor: "rgba(255,255,255,0.88)" }}>
+          <Card sx={{ borderRadius: 2, bgcolor: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}>
             <CardContent sx={{ p: 3 }}>
               <Typography variant="h6" sx={{ fontWeight: 800, mb: 2 }}>Email</Typography>
               <Stack spacing={1.5}>
@@ -252,7 +244,7 @@ export function SettingsPage() {
           <Divider />
 
           {/* Password */}
-          <Card sx={{ borderRadius: 2, bgcolor: "rgba(255,255,255,0.88)" }}>
+          <Card sx={{ borderRadius: 2, bgcolor: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}>
             <CardContent sx={{ p: 3 }}>
               <Typography variant="h6" sx={{ fontWeight: 800, mb: 2 }}>Change Password</Typography>
               <Stack spacing={1.5}>
@@ -299,7 +291,7 @@ export function SettingsPage() {
           <Divider />
 
           {/* Wise */}
-          <Card sx={{ borderRadius: 2, bgcolor: "rgba(255,255,255,0.88)" }}>
+          <Card sx={{ borderRadius: 2, bgcolor: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}>
             <CardContent sx={{ p: 3 }}>
               <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", mb: 1 }}>
                 <Typography variant="h6" sx={{ fontWeight: 800 }}>Wise Account</Typography>

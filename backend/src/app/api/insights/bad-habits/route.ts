@@ -6,10 +6,10 @@ export const runtime = "nodejs";
 
 function getPeriodStart(period: string): Date {
   const now = new Date();
-  if (period === "month") return new Date(now.getFullYear(), now.getMonth(), 1);
-  if (period === "6months") return new Date(now.getFullYear(), now.getMonth() - 6, 1);
-  if (period === "year") return new Date(now.getFullYear(), 0, 1);
-  return new Date(now.getFullYear(), now.getMonth(), 1);
+  if (period === "month")   return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  if (period === "6months") return new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
+  if (period === "year")    return new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+  return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 }
 
 function compoundGrowth(monthly: number, annualRate: number, years: number): number {
