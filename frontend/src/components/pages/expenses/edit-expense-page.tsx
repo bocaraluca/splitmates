@@ -38,6 +38,7 @@ function buildCachedExpenseListItem(
     paidBy,
     category: (raw.category as ExpenseListItem["category"]) ?? "other",
     splitType: (raw.splitType as ExpenseListItem["splitType"]) ?? "equal",
+    isBadHabit: Boolean(raw.isBadHabit ?? false),
   };
 }
 

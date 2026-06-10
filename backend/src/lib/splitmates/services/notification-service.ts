@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import type { Id } from "../model/types";
 
-type NotificationType = "group_added" | "expense_added" | "payment_request" | "payment_received" | "payment_failed";
+type NotificationType = "group_added" | "expense_added" | "payment_request" | "payment_received" | "payment_failed" | "chat_message";
 
 async function create(params: {
   userId: Id;
