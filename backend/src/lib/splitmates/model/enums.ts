@@ -8,6 +8,13 @@ export const EXPENSE_CATEGORIES = [
   "entertainment",
   "food",
   "other",
+  "alcohol",
+  "gambling",
+  "smoking",
+  "fast_food",
+  "luxury",
+  "online_shopping",
+  "subscriptions",
 ] as const;
 
 export type GroupCategory = (typeof GROUP_CATEGORIES)[number];
