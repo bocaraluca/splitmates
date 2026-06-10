@@ -147,15 +147,19 @@ export function AppNavbar() {
               zIndex: 1,
             }}
           >
-            <Button component={Link} href="/dashboard" sx={{ color: "#eef3ff", fontWeight: 800, fontSize: 17 }}>
-              Dashboard
-            </Button>
-            <Button component={Link} href="/groups" sx={{ color: "#eef3ff", fontWeight: 800, fontSize: 17 }}>
-              Groups
-            </Button>
-            <Button component={Link} href="/insights/bad-habits" sx={{ color: "#eef3ff", fontWeight: 800, fontSize: 17 }}>
-              Insights
-            </Button>
+            {role !== "admin" && (
+              <>
+                <Button component={Link} href="/dashboard" sx={{ color: "#eef3ff", fontWeight: 800, fontSize: 17 }}>
+                  Dashboard
+                </Button>
+                <Button component={Link} href="/groups" sx={{ color: "#eef3ff", fontWeight: 800, fontSize: 17 }}>
+                  Groups
+                </Button>
+                <Button component={Link} href="/insights/bad-habits" sx={{ color: "#eef3ff", fontWeight: 800, fontSize: 17 }}>
+                  Insights
+                </Button>
+              </>
+            )}
           </Stack>
 
           <Stack direction="row" spacing={1.2} sx={{ ml: "auto", alignItems: "center", zIndex: 2 }}>
@@ -184,20 +188,24 @@ export function AppNavbar() {
             </Box>
           </Stack>
           <Menu anchorEl={mobileMenuAnchor} open={mobileMenuOpen} onClose={handleCloseMobileMenu}>
-            <MenuItem component={Link} href="/dashboard" onClick={handleCloseMobileMenu}>
-              Dashboard
-            </MenuItem>
-            <MenuItem component={Link} href="/groups" onClick={handleCloseMobileMenu}>
-              Groups
-            </MenuItem>
-            <MenuItem component={Link} href="/insights/bad-habits" onClick={handleCloseMobileMenu}>
-              Insights
-            </MenuItem>
-            {role === "admin" ? (
+            {role !== "admin" && (
+              <>
+                <MenuItem component={Link} href="/dashboard" onClick={handleCloseMobileMenu}>
+                  Dashboard
+                </MenuItem>
+                <MenuItem component={Link} href="/groups" onClick={handleCloseMobileMenu}>
+                  Groups
+                </MenuItem>
+                <MenuItem component={Link} href="/insights/bad-habits" onClick={handleCloseMobileMenu}>
+                  Insights
+                </MenuItem>
+              </>
+            )}
+            {role === "admin" && (
               <MenuItem component={Link} href="/admin" onClick={handleCloseMobileMenu}>
                 Admin
               </MenuItem>
-            ) : null}
+            )}
           </Menu>
           <Menu anchorEl={userMenuAnchor} open={userMenuOpen} onClose={handleCloseUserMenu}
             slotProps={{ paper: { sx: { bgcolor: "rgba(30,10,53,0.65)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", border: "1px solid rgba(255,255,255,0.12)", boxShadow: "0 16px 40px rgba(0,0,0,0.5)" } } }}

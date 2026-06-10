@@ -488,10 +488,10 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
         <Stack spacing={3}>
           <Button
             startIcon={<ArrowBackRoundedIcon />}
-            onClick={() => router.push("/groups")}
+            onClick={() => router.push(isAppAdmin ? "/admin" : "/groups")}
             sx={{ alignSelf: "flex-start", color: "#e79aaa", fontWeight: 700, textTransform: "none" }}
           >
-            Back to Groups
+            Back
           </Button>
 
           <Box
@@ -584,7 +584,7 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
                 mt: { xs: 0.25, lg: 0 },
               }}
             >
-              <Button
+              {!isAppAdmin && <Button
                 variant="contained"
                 onClick={() => void handleGeneratorToggle()}
                 disabled={generatorBusy}
@@ -608,9 +608,9 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
                 }}
               >
                 {generatorRunning ? "Stop fake expenses" : "Create fake expenses"}
-              </Button>
+              </Button>}
 
-              <Button
+              {!isAppAdmin && <Button
                 aria-label="Add expense"
                 onClick={() => router.push(`/groups/${groupId}/expenses/new`)}
                 sx={{
@@ -641,7 +641,7 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
                 }}
                 >
                   <AddRoundedIcon sx={{ fontSize: { xs: 24, md: 34 } }} />
-                </Button>
+                </Button>}
             </Stack>
           </Box>
 
@@ -666,13 +666,13 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
                 label="EXPENSES"
                 sx={{ minHeight: 54, fontWeight: 700 }}
               />
-              <Tab
+              {!isAppAdmin && <Tab
                 value="settlements"
                 icon={<AccountBalanceWalletRoundedIcon />}
                 iconPosition="start"
                 label="SETTLEMENTS"
                 sx={{ minHeight: 54, fontWeight: 700 }}
-              />
+              />}
               <Tab
                 value="members"
                 icon={<GroupRoundedIcon />}
@@ -783,13 +783,10 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
                       </TableHead>
                       <TableBody>
                         {expenseItems.map((expense) => (
-                          <TableRow key={expense.id} hover>
+                          <TableRow key={expense.id} hover sx={expense.isBadHabit ? { borderLeft: "3px solid #f87171" } : {}}>
                             <TableCell>
                               <Stack direction="row" spacing={0.8} sx={{ alignItems: "center" }}>
                                 <Typography sx={{ fontWeight: 600 }}>{expense.title}</Typography>
-                                {expense.isBadHabit && (
-                                  <Box component="span" title="Bad habit" sx={{ fontSize: 14, lineHeight: 1 }}>🔥</Box>
-                                )}
                               </Stack>
                               <Typography variant="caption" sx={{ color: "text.secondary" }}>
                                 {formatDate(expense.date)}
@@ -840,14 +837,13 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
 
                   <Stack spacing={1.2} sx={{ display: { xs: "block", md: "none" }, p: 1.5 }}>
                     {expenseItems.map((expense) => (
-                      <Card key={expense.id} sx={{ borderRadius: 1.5, bgcolor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                      <Card key={expense.id} sx={{ borderRadius: 1.5, bgcolor: "rgba(255,255,255,0.05)", border: expense.isBadHabit ? "1px solid rgba(248,113,113,0.4)" : "1px solid rgba(255,255,255,0.08)" }}>
                         <CardContent sx={{ p: 1.6 }}>
                           <Stack spacing={1}>
                             <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1.2, alignItems: "flex-start" }}>
                               <Box sx={{ minWidth: 0 }}>
                                 <Stack direction="row" spacing={0.6} sx={{ alignItems: "center" }}>
                                   <Typography sx={{ fontWeight: 800, fontSize: 18, lineHeight: 1.15 }}>{expense.title}</Typography>
-                                  {expense.isBadHabit && <Box component="span" sx={{ fontSize: 16 }}>🔥</Box>}
                                 </Stack>
                                 <Typography variant="caption" sx={{ color: "text.secondary" }}>
                                   {formatDate(expense.date)}
@@ -1187,7 +1183,7 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
               )}
 
               {balances?.totalYouOwe === 0 && balances?.totalOwedToYou === 0 && (
-                <Card sx={{ borderRadius: 1.5, bgcolor: "rgba(255,255,255,0.82)" }}>
+                <Card sx={{ borderRadius: 1.5, bgcolor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
                   <CardContent sx={{ textAlign: "center", py: 4 }}>
                     <Typography sx={{ fontSize: 48 }}>🎉</Typography>
                     <Typography sx={{ fontWeight: 800, fontSize: 22, mt: 1 }}>All settled up!</Typography>
@@ -1235,19 +1231,19 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
                   }
 
                   const isAdmin = group?.adminIds.includes(member.id) ?? false;
-                  const canDelete = Boolean(canManageGroup && !isAdmin);
+                  const canDelete = isAppAdmin ? true : Boolean(canManageGroup && !isAdmin);
 
                   return (
                     <Card key={member.id} sx={{ borderRadius: 1.5, background: "rgba(255,255,255,0.05)" }}>
                       <CardContent sx={{ p: 2.4 }}>
                         <Stack direction="row" spacing={1.2} sx={{ justifyContent: "space-between", alignItems: "flex-start" }}>
-                          <Box>
-                            <Typography sx={{ fontWeight: 800, fontSize: { xs: 22, md: 30 }, lineHeight: 1 }}>{member.username}</Typography>
+                          <Box sx={{ flex: 1 }}>
+                            <Stack direction="row" spacing={1.2} sx={{ alignItems: "center" }}>
+                              <Typography sx={{ fontWeight: 800, fontSize: { xs: 22, md: 30 }, lineHeight: 1 }}>{member.username}</Typography>
+                              {isAdmin && <Chip label="Admin" sx={{ bgcolor: "rgba(86,201,239,0.15)", color: "#56c9ef", fontWeight: 800 }} />}
+                            </Stack>
                             <Typography sx={{ mt: 0.8, color: "text.secondary", fontSize: { xs: 15, md: 22 } }}>{member.email}</Typography>
                           </Box>
-                          {isAdmin ? (
-                            <Chip label="Admin" sx={{ bgcolor: "rgba(86,201,239,0.15)", color: "#56c9ef", fontWeight: 800 }} />
-                          ) : null}
                           {canDelete ? (
                             <Button
                               variant="text"
@@ -1267,9 +1263,11 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
               </Box>
 
               <Stack direction="row" spacing={1.2} sx={{ pt: 1, justifyContent: "flex-end" }}>
-                <Button color="error" variant="outlined" onClick={() => void handleLeaveGroup()} disabled={groupActionBusy}>
-                  Leave Group
-                </Button>
+                {!isAppAdmin && (
+                  <Button color="error" variant="outlined" onClick={() => void handleLeaveGroup()} disabled={groupActionBusy}>
+                    Leave Group
+                  </Button>
+                )}
                 <Button
                   color="error"
                   variant="outlined"

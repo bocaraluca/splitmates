@@ -33,7 +33,7 @@ function GoogleCallbackContent() {
     const permissions = permissionsRaw ? JSON.parse(decodeURIComponent(permissionsRaw)) as string[] : [];
 
     login(username, token, role, permissions);
-    router.push("/dashboard");
+    router.push(role === "admin" ? "/admin" : "/dashboard");
   }, [searchParams, router]);
 
   if (error) {

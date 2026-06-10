@@ -60,7 +60,7 @@ export function AuthPage({ mode }: { mode: "login" | "signup" }) {
       });
 
       login(response.user.username, response.token, response.role, response.permissions);
-      router.push("/dashboard");
+      router.push(response.role === "admin" ? "/admin" : "/dashboard");
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Authentication failed.");
     }

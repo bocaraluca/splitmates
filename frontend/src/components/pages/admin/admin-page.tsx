@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
@@ -107,7 +108,7 @@ function ManagementTab({
 
       {loading ? <Typography sx={{ color: "text.secondary" }}>Loading admin data...</Typography> : null}
 
-      <Card sx={{ borderRadius: 2, background: "rgba(255,255,255,0.94)" }}>
+      <Card sx={{ borderRadius: 2, background: "rgba(255,255,255,0.05)" }}>
         <CardContent sx={{ p: { xs: 2, md: 3 } }}>
           <Typography variant="h5" sx={{ fontWeight: 800, mb: 2 }}>
             Users
@@ -194,7 +195,7 @@ function ManagementTab({
         </CardContent>
       </Card>
 
-      <Card sx={{ borderRadius: 2, background: "rgba(255,255,255,0.94)" }}>
+      <Card sx={{ borderRadius: 2, background: "rgba(255,255,255,0.05)" }}>
         <CardContent sx={{ p: { xs: 2, md: 3 } }}>
           <Typography variant="h5" sx={{ fontWeight: 800, mb: 2 }}>
             Groups
@@ -205,53 +206,34 @@ function ManagementTab({
               <TableHead>
                 <TableRow>
                   <TableCell>Group</TableCell>
-                  <TableCell>Admin</TableCell>
                   <TableCell>Members</TableCell>
                   <TableCell>Created</TableCell>
-                  <TableCell align="right">Actions</TableCell>
+                  <TableCell>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {groups.map((group) => {
-                  const admins = Array.isArray(group.admins) ? group.admins : [];
-
-                  return (
-                    <TableRow key={group.id} hover>
-                      <TableCell>
-                        <Typography sx={{ fontWeight: 700 }}>{group.name}</Typography>
-                        {group.description ? (
-                          <Typography variant="caption" sx={{ color: "text.secondary", display: "block" }}>
-                            {group.description}
-                          </Typography>
-                        ) : null}
-                      </TableCell>
-                      <TableCell>
-                        <Stack direction="row" spacing={0.75} sx={{ flexWrap: "wrap", alignItems: "center" }}>
-                          {admins.length > 0 ? (
-                            admins.map((admin) => (
-                              <Stack key={admin?.id ?? admin?.username ?? "unknown"} direction="row" spacing={0.5} sx={{ alignItems: "center" }}>
-                                <Chip label={admin?.username ?? "unknown"} size="small" />
-                                <Button
-                                  size="small"
-                                  color="error"
-                                  variant="outlined"
-                                  sx={{ minWidth: "auto", px: 1 }}
-                                  onClick={() => onRemoveGroupAdmin(group.id, group.name, admin?.id ?? 0, admin?.username ?? "unknown")}
-                                  disabled={loading}
-                                  title="Remove admin status"
-                                >
-                                  Remove
-                                </Button>
-                              </Stack>
-                            ))
-                          ) : (
-                            <Typography sx={{ color: "text.secondary" }}>No admins</Typography>
-                          )}
-                        </Stack>
-                      </TableCell>
-                      <TableCell>{group.memberCount}</TableCell>
-                      <TableCell>{formatDate(group.createdAt)}</TableCell>
-                      <TableCell align="right">
+                {groups.map((group) => (
+                  <TableRow key={group.id} hover>
+                    <TableCell>
+                      <Typography sx={{ fontWeight: 700 }}>{group.name}</Typography>
+                      {group.description ? (
+                        <Typography variant="caption" sx={{ color: "text.secondary", display: "block" }}>
+                          {group.description}
+                        </Typography>
+                      ) : null}
+                    </TableCell>
+                    <TableCell>{group.memberCount}</TableCell>
+                    <TableCell>{formatDate(group.createdAt)}</TableCell>
+                    <TableCell>
+                      <Stack direction="row" spacing={1}>
+                        <Button
+                          component={Link}
+                          href={`/groups/${group.id}`}
+                          variant="outlined"
+                          size="small"
+                        >
+                          View group
+                        </Button>
                         <Button
                           color="error"
                           variant="outlined"
@@ -259,12 +241,12 @@ function ManagementTab({
                           startIcon={<DeleteOutlineRoundedIcon />}
                           onClick={() => onDeleteGroup(group.id, group.name)}
                         >
-                          Delete group
+                          Delete
                         </Button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
+                      </Stack>
+                    </TableCell>
+                  </TableRow>
+                ))}
                 {!groups.length ? (
                   <TableRow>
                     <TableCell colSpan={5}>
@@ -340,7 +322,7 @@ function SuspiciousTab({
       </Stack>
 
       {users.length === 0 ? (
-        <Card sx={{ borderRadius: 2, background: "rgba(255,255,255,0.94)" }}>
+        <Card sx={{ borderRadius: 2, background: "rgba(255,255,255,0.05)" }}>
           <CardContent>
             <Typography sx={{ color: "text.secondary" }}>No suspicious users yet.</Typography>
           </CardContent>
@@ -356,7 +338,7 @@ function SuspiciousTab({
           );
 
           return (
-            <Card key={entry.userId} sx={{ borderRadius: 2, background: "rgba(255,255,255,0.95)", border: "1px solid rgba(143,73,194,0.14)" }}>
+            <Card key={entry.userId} sx={{ borderRadius: 2, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
               <CardContent sx={{ p: 2.5, display: "flex", flexDirection: "column", gap: 2 }}>
                 <Box>
                   <Typography sx={{ fontWeight: 900, fontSize: 18 }}>{entry.user.username}</Typography>
@@ -381,7 +363,7 @@ function SuspiciousTab({
                     </Typography>
                     <Stack spacing={0.75} sx={{ mt: 0.75 }}>
                       {uniqueObservations.map((obs, idx) => (
-                        <Box key={idx} sx={{ p: 1, borderRadius: 0.75, bgcolor: "rgba(247,251,255,0.95)", border: "1px solid rgba(34,58,90,0.08)" }}>
+                        <Box key={idx} sx={{ p: 1, borderRadius: 0.75, bgcolor: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
                           <Typography sx={{ fontWeight: 500, fontSize: 13 }}>{obs.note}</Typography>
                           <Typography variant="caption" sx={{ color: "text.secondary", display: "block", mt: 0.25 }}>
                             {formatDate(obs.createdAt)}
@@ -453,7 +435,7 @@ function SuspiciousTab({
 
 function StatCard({ label, value, unit }: { label: string; value: string | number; unit?: string }) {
   return (
-    <Box sx={{ p: 2, borderRadius: 1.5, bgcolor: "rgba(247,251,255,0.95)", border: "1px solid rgba(34,58,90,0.10)", minWidth: 130, flex: 1 }}>
+    <Box sx={{ p: 2, borderRadius: 1.5, bgcolor: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", minWidth: 130, flex: 1 }}>
       <Typography variant="caption" sx={{ color: "text.secondary", textTransform: "uppercase", letterSpacing: "0.1em" }}>{label}</Typography>
       <Typography sx={{ fontWeight: 900, fontSize: 22, lineHeight: 1.2, mt: 0.5 }}>
         {value}{unit ? <Typography component="span" sx={{ fontSize: 13, fontWeight: 400, color: "text.secondary", ml: 0.5 }}>{unit}</Typography> : null}
@@ -476,7 +458,7 @@ function ResultPanel({ result, title }: { result: AppStatsResult; title: string 
   };
 
   return (
-    <Card sx={{ borderRadius: 2, background: "rgba(255,255,255,0.94)", flex: 1, minWidth: 0 }}>
+    <Card sx={{ borderRadius: 2, background: "rgba(255,255,255,0.05)", flex: 1, minWidth: 0 }}>
       <CardContent sx={{ p: { xs: 2, md: 3 } }}>
         <Stack direction="row" spacing={1} sx={{ alignItems: "center", mb: 2 }}>
           <Typography variant="h6" sx={{ fontWeight: 800, flexGrow: 1 }}>{title}</Typography>
@@ -850,7 +832,7 @@ export function AdminPage() {
 
           {errorMessage ? <Alert severity="error">{errorMessage}</Alert> : null}
 
-          <Card sx={{ borderRadius: 2, background: "rgba(255,255,255,0.88)" }}>
+          <Card sx={{ borderRadius: 2, background: "rgba(255,255,255,0.05)" }}>
             <CardContent sx={{ pb: 2 }}>
               <Tabs value={activeTab} onChange={(_, value: AdminTab) => setActiveTab(value)} variant="scrollable" allowScrollButtonsMobile>
                 <Tab value="management" label="Management" />

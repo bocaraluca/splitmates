@@ -26,7 +26,7 @@ function VerifyContent() {
     })
       .then((response) => {
         login(response.user.username, response.token, response.role, response.permissions);
-        router.push("/dashboard");
+        router.push(response.role === "admin" ? "/admin" : "/dashboard");
       })
       .catch((err) => {
         setError(err instanceof Error ? err.message : "Invalid or expired link.");

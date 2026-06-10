@@ -319,8 +319,8 @@ export function EditExpensePage({ groupId, expenseId }: { groupId: number; expen
                 </TextField>
 
                 {splitTypeValue === "custom" && (
-                  <Box sx={{ p: 2, borderRadius: 1.5, border: "1px solid rgba(148, 71, 198, 0.2)", background: "rgba(250, 243, 255, 0.78)" }}>
-                    <Typography sx={{ fontWeight: 800, mb: 1.4, color: "#4a3673" }}>Custom shares by member</Typography>
+                  <Box sx={{ p: 2, borderRadius: 1.5, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)" }}>
+                    <Typography sx={{ fontWeight: 800, mb: 1.4 }}>Custom shares by member</Typography>
                     <Stack spacing={1.4}>
                       {selectedMembers.map((member) => {
                         const memberId = Number(member?.id ?? 0);
@@ -340,11 +340,11 @@ export function EditExpensePage({ groupId, expenseId }: { groupId: number; expen
                         );
                       })}
                     </Stack>
-                    <Typography sx={{ mt: 1.3, fontWeight: 700, color: customSharesMatchAmount ? "#2f6f4e" : "#b42352" }}>
+                    <Typography sx={{ mt: 1.3, fontWeight: 700, color: customSharesMatchAmount ? "#34d399" : "#f87171" }}>
                       Total shares: {Number.isFinite(customShareTotal) ? customShareTotal.toFixed(2) : "0.00"} / {Number.isFinite(amountNumeric) ? amountNumeric.toFixed(2) : "0.00"}
                     </Typography>
                     {!customSharesMatchAmount && (
-                      <Typography sx={{ mt: 0.4, fontSize: 13, color: "#b42352" }}>
+                      <Typography sx={{ mt: 0.4, fontSize: 13, color: "#f87171" }}>
                         The total custom shares must match the Amount exactly to save.
                       </Typography>
                     )}
