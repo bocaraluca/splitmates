@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import type { GroupCategory } from "../model/types";
 import { emitEvent } from "../core/events";
 import { requirePermission } from "./auth/permissions-service";
+import { notifyGroupAdded } from "./notification-service";
 
 interface GroupInput {
   name: string;
@@ -159,6 +160,12 @@ export async function addMemberToGroup(groupId: number, identifier: string, user
 
   const formatted = await formatGroupData(updatedGroup!, updatedGroup!.members);
   emitEvent("group.memberAdded", { groupId, userId: newUser.id });
+
+  const adder = await prisma.user.findUnique({ where: { id: userId } });
+  if (!alreadyMember && adder) {
+    void notifyGroupAdded(newUser.id, groupId, group.name, adder.username);
+  }
+
   return formatted;
 }
 

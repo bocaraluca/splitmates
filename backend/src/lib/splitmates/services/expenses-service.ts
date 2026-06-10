@@ -3,6 +3,7 @@ import { emitEvent } from "../core/events";
 import { buildEqualShares, normalizeShares, roundMoney } from "../core/math";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "./auth/permissions-service";
+import { notifyExpenseAdded, notifyPaymentReceived } from "./notification-service";
 
 interface ExpenseInput {
   title: string;
@@ -105,7 +106,7 @@ export async function getExpenses(groupId: Id, page: number, pageSize: number, s
   };
 }
 
-export async function createExpense(groupId: Id, actorUserId: Id, input: ExpenseInput) {
+export async function createExpense(groupId: Id, actorUserId: Id, input: ExpenseInput, options?: { skipNotifications?: boolean }) {
   const group = await ensureUserInGroup(groupId, actorUserId);
 
   if (!group.members.find(m => m.userId === input.paidByUserId)) {
@@ -148,6 +149,20 @@ export async function createExpense(groupId: Id, actorUserId: Id, input: Expense
   });
 
   emitEvent("expense.created", expense);
+
+  if (!options?.skipNotifications) {
+    const groupRecord = await prisma.group.findUnique({ where: { id: groupId } });
+    void notifyExpenseAdded(
+      expense.participants.map((p) => p.userId),
+      expense.paidByUserId,
+      groupId,
+      expense.id,
+      expense.title,
+      groupRecord?.name ?? "group",
+      expense.paidByUser.username,
+    );
+  }
+
   return expense;
 }
 
@@ -313,6 +328,25 @@ export async function createPayment(groupId: Id, actorUserId: Id, input: Omit<Pa
   });
 
   emitEvent("payment.created", payment);
+
+  const [fromUser, toUser, groupRecord] = await Promise.all([
+    prisma.user.findUnique({ where: { id: input.fromUserId } }),
+    prisma.user.findUnique({ where: { id: input.toUserId } }),
+    prisma.group.findUnique({ where: { id: groupId } }),
+  ]);
+
+  if (fromUser && toUser && groupRecord) {
+    void notifyPaymentReceived(
+      input.toUserId,
+      input.fromUserId,
+      groupId,
+      payment.id,
+      roundMoney(input.amount),
+      fromUser.username,
+      groupRecord.name,
+    );
+  }
+
   return payment;
 }
 

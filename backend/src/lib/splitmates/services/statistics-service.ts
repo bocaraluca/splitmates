@@ -55,7 +55,10 @@ async function buildBalanceMap(groupId?: Id): Promise<BalanceMap> {
   }
 
   const payments = await prisma.payment.findMany({
-    where: numGroupId ? { groupId: numGroupId } : undefined,
+    where: {
+      ...(numGroupId ? { groupId: numGroupId } : {}),
+      status: "completed",
+    },
   });
 
   for (const payment of payments) {
@@ -63,19 +66,56 @@ async function buildBalanceMap(groupId?: Id): Promise<BalanceMap> {
     touch(Number(payment.fromUserId), Number(payment.toUserId), -amount);
   }
 
-  for (const [fromUserId, row] of balances.entries()) {
-    for (const [toUserId, amount] of row.entries()) {
-      if (Math.abs(amount) < 0.005) {
-        row.delete(toUserId);
-      }
-    }
+  return simplifyDebts(balances);
+}
 
-    if (row.size === 0) {
-      balances.delete(fromUserId);
+function simplifyDebts(balances: BalanceMap): BalanceMap {
+  // Calculate net balance per user (positive = owed money, negative = owes money)
+  const net = new Map<number, number>();
+
+  for (const [fromId, row] of balances.entries()) {
+    for (const [toId, amount] of row.entries()) {
+      if (Math.abs(amount) < 0.005) continue;
+      net.set(fromId, roundMoney((net.get(fromId) ?? 0) - amount));
+      net.set(toId, roundMoney((net.get(toId) ?? 0) + amount));
     }
   }
 
-  return balances;
+  // Split into debtors (owe money) and creditors (are owed money)
+  const debtors: { id: number; amount: number }[] = [];
+  const creditors: { id: number; amount: number }[] = [];
+
+  for (const [userId, balance] of net.entries()) {
+    if (balance < -0.005) debtors.push({ id: userId, amount: roundMoney(-balance) });
+    else if (balance > 0.005) creditors.push({ id: userId, amount: balance });
+  }
+
+  // Greedy matching — minimizes number of transactions
+  const simplified: BalanceMap = new Map();
+  const touch = (fromId: number, toId: number, amount: number) => {
+    if (!simplified.has(fromId)) simplified.set(fromId, new Map());
+    simplified.get(fromId)!.set(toId, roundMoney((simplified.get(fromId)!.get(toId) ?? 0) + amount));
+  };
+
+  let i = 0;
+  let j = 0;
+  while (i < debtors.length && j < creditors.length) {
+    const debtor = debtors[i];
+    const creditor = creditors[j];
+    const amount = roundMoney(Math.min(debtor.amount, creditor.amount));
+
+    if (amount > 0.005) {
+      touch(debtor.id, creditor.id, amount);
+    }
+
+    debtor.amount = roundMoney(debtor.amount - amount);
+    creditor.amount = roundMoney(creditor.amount - amount);
+
+    if (debtor.amount < 0.005) i++;
+    if (creditor.amount < 0.005) j++;
+  }
+
+  return simplified;
 }
 
 export async function balanceSummaryForUser(userId: Id, groupId?: Id): Promise<BalanceSummary> {
@@ -122,12 +162,12 @@ export async function balanceSummaryForUser(userId: Id, groupId?: Id): Promise<B
 
       if (fromUserId === numUserId) {
         totalYouOwe = roundMoney(totalYouOwe + amount);
-        youOweTo.push({ userId: toUser.id, username: toUser.username, email: toUser.email, amount });
+        youOweTo.push({ userId: toUser.id, username: toUser.username, email: toUser.email, wiseEmail: toUser.wiseEmail ?? null, amount });
       }
 
       if (toUserId === numUserId) {
         totalOwedToYou = roundMoney(totalOwedToYou + amount);
-        othersOweToYou.push({ userId: fromUser.id, username: fromUser.username, email: fromUser.email, amount });
+        othersOweToYou.push({ userId: fromUser.id, username: fromUser.username, email: fromUser.email, wiseEmail: fromUser.wiseEmail ?? null, amount });
       }
     }
   }

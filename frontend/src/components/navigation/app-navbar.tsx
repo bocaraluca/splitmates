@@ -8,6 +8,7 @@ import MenuIcon from "@mui/icons-material/MenuRounded";
 import { AppBar, Box, Button, Container, IconButton, Menu, MenuItem, Stack, Toolbar, Typography } from "@mui/material";
 import { fetchFromBackend } from "@/lib/backend-api";
 import { DEFAULT_USERNAME, getRole, getToken, getUsername, logout } from "@/lib/auth-storage";
+import { NotificationBell } from "./notification-bell";
 
 export function AppNavbar() {
   const router = useRouter();
@@ -22,7 +23,16 @@ export function AppNavbar() {
       setRole(getRole());
     }, 0);
 
-    return () => window.clearTimeout(timeoutId);
+    const handleUsernameChanged = (e: Event) => {
+      const detail = (e as CustomEvent<{ username: string }>).detail;
+      setUsername(detail.username);
+    };
+
+    window.addEventListener("splitmates:username-changed", handleUsernameChanged);
+    return () => {
+      window.clearTimeout(timeoutId);
+      window.removeEventListener("splitmates:username-changed", handleUsernameChanged);
+    };
   }, []);
 
   const userMenuOpen = Boolean(userMenuAnchor);
@@ -151,6 +161,7 @@ export function AppNavbar() {
                 Admin
               </Button>
             ) : null}
+            <NotificationBell />
             <Box
               onClick={handleOpenUserMenu}
               sx={{
@@ -189,6 +200,9 @@ export function AppNavbar() {
               </Typography>
               <Typography sx={{ fontWeight: 800 }}>{username}</Typography>
             </Box>
+            <MenuItem component={Link} href="/settings" onClick={handleCloseUserMenu}>
+              Settings
+            </MenuItem>
             <MenuItem onClick={handleLogout}>Log out</MenuItem>
           </Menu>
         </Toolbar>

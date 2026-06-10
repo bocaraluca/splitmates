@@ -10,6 +10,7 @@ import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import GroupRoundedIcon from "@mui/icons-material/GroupRounded";
 import ReceiptLongRoundedIcon from "@mui/icons-material/ReceiptLongRounded";
+import AccountBalanceWalletRoundedIcon from "@mui/icons-material/AccountBalanceWalletRounded";
 import {
   Box,
   Button,
@@ -36,7 +37,7 @@ import { AppNavbar } from "@/components/navigation/app-navbar";
 import { fetchFromBackend, markExpenseDeleted } from "@/lib/backend-api";
 import { getRole, getToken } from "@/lib/auth-storage";
 import { EXPENSE_CATEGORIES } from "@/lib/types";
-import type { BackendStatus, DashboardSummary, ExpenseCategory, ExpenseListResponse, GroupStats, GroupSummary } from "@/lib/types";
+import type { BackendStatus, BalanceSummary, DashboardSummary, ExpenseCategory, ExpenseListResponse, GroupStats, GroupSummary } from "@/lib/types";
 
 function formatMoney(value: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "RON", maximumFractionDigits: 2 }).format(value);
@@ -48,12 +49,17 @@ function formatDate(value: string) {
 
 const INFINITE_SCROLL_PAGE_SIZE = 20;
 
-export function GroupPreviewPage({ groupId }: { groupId: number }) {
+export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; initialTab?: "expenses" | "settlements" | "members" }) {
   const router = useRouter();
   const [group, setGroup] = useState<GroupSummary | null>(null);
   const [expenses, setExpenses] = useState<ExpenseListResponse | null>(null);
   const [stats, setStats] = useState<GroupStats | null>(null);
-  const [tabValue, setTabValue] = useState<"expenses" | "members">("expenses");
+  const [tabValue, setTabValue] = useState<"expenses" | "settlements" | "members">(initialTab ?? "expenses");
+  const [balances, setBalances] = useState<BalanceSummary | null>(null);
+  const [wisePayingId, setWisePayingId] = useState<number | null>(null);
+  const [requestingId, setRequestingId] = useState<number | null>(null);
+  const [payError, setPayError] = useState<string | null>(null);
+  const [paySuccess, setPaySuccess] = useState<string | null>(null);
   
   const [generatorBusy, setGeneratorBusy] = useState(false);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
@@ -101,10 +107,11 @@ export function GroupPreviewPage({ groupId }: { groupId: number }) {
     try {
       const auth = token ? { token } : {};
 
-      const [expensesResponse, statsResponse, healthResponse] = await Promise.all([
+      const [expensesResponse, statsResponse, healthResponse, balancesResponse] = await Promise.all([
         fetchExpensePage(1),
         fetchFromBackend<{ stats: GroupStats }>(`/groups/${groupId}/stats`, auth),
         fetchFromBackend<BackendStatus>("/health", auth),
+        fetchFromBackend<{ summary: BalanceSummary }>(`/groups/${groupId}/balances`, auth),
       ]);
 
       setExpenses(expensesResponse);
@@ -114,7 +121,7 @@ export function GroupPreviewPage({ groupId }: { groupId: number }) {
       setPrefetchedExpenses(null);
 
       setStats(statsResponse.stats);
-      
+      setBalances(balancesResponse.summary);
       setGeneratorRunning(Boolean(healthResponse.generator?.running && healthResponse.generator?.groupId === groupId));
       setGroupError(null);
     } catch (error) {
@@ -185,11 +192,11 @@ export function GroupPreviewPage({ groupId }: { groupId: number }) {
   }, [loadMoreExpenses]);
 
   useEffect(() => {
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
     const handleBackendUpdate = (event: Event) => {
       const detail = (event as CustomEvent<unknown>).detail;
-      if (!touchesCurrentGroup(detail, groupId)) {
-        return;
-      }
+      if (!touchesCurrentGroup(detail, groupId)) return;
 
       const payload = detail as { type?: unknown } | undefined;
       const type = typeof payload?.type === "string" ? payload.type : "";
@@ -199,11 +206,23 @@ export function GroupPreviewPage({ groupId }: { groupId: number }) {
         return;
       }
 
+      // Generator events — debounce to avoid cascading re-fetches every 1.5s
+      if (type.startsWith("generator.")) {
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          void loadExpensesStatsAndHealth();
+        }, 2000);
+        return;
+      }
+
       void loadExpensesStatsAndHealth();
     };
 
     window.addEventListener("splitmates:backend-update", handleBackendUpdate);
-    return () => window.removeEventListener("splitmates:backend-update", handleBackendUpdate);
+    return () => {
+      window.removeEventListener("splitmates:backend-update", handleBackendUpdate);
+      if (debounceTimer) clearTimeout(debounceTimer);
+    };
   }, [groupId, loadExpensesStatsAndHealth, loadGroupPreviewData]);
 
   const categoryBreakdown = useMemo(() => {
@@ -359,6 +378,70 @@ export function GroupPreviewPage({ groupId }: { groupId: number }) {
       setActionMessage(error instanceof Error ? error.message : "Unable to delete group.");
     } finally {
       setGroupActionBusy(false);
+    }
+  }
+
+  async function handleWisePayment(toUserId: number, amount: number) {
+    if (!token) return;
+    const me = group?.members?.find((m) => m != null);
+    if (!me) return;
+
+    setWisePayingId(toUserId);
+    setPayError(null);
+    setPaySuccess(null);
+    try {
+      await fetchFromBackend(`/groups/${groupId}/payments/wise`, {
+        method: "POST",
+        token,
+        body: JSON.stringify({ fromUserId: me.id, toUserId, amount }),
+      });
+      setPaySuccess("Payment successful!");
+      await loadExpensesStatsAndHealth();
+    } catch (error) {
+      setPayError(error instanceof Error ? error.message : "Payment failed.");
+    } finally {
+      setWisePayingId(null);
+    }
+  }
+
+  async function handleManualPayment(toUserId: number, amount: number) {
+    if (!token) return;
+    const me = group?.members?.find((m) => m != null);
+    if (!me) return;
+
+    setWisePayingId(toUserId);
+    setPayError(null);
+    setPaySuccess(null);
+    try {
+      await fetchFromBackend(`/groups/${groupId}/payments`, {
+        method: "POST",
+        token,
+        body: JSON.stringify({ fromUserId: me.id, toUserId, amount }),
+      });
+      setPaySuccess("Payment marked as paid!");
+      await loadExpensesStatsAndHealth();
+    } catch (error) {
+      setPayError(error instanceof Error ? error.message : "Payment failed.");
+    } finally {
+      setWisePayingId(null);
+    }
+  }
+
+  async function handlePaymentRequest(toUserId: number, amount: number) {
+    if (!token) return;
+    setRequestingId(toUserId);
+    setPayError(null);
+    try {
+      await fetchFromBackend(`/groups/${groupId}/payment-requests`, {
+        method: "POST",
+        token,
+        body: JSON.stringify({ toUserId, amount }),
+      });
+      setPayError(null);
+    } catch (error) {
+      setPayError(error instanceof Error ? error.message : "Request failed.");
+    } finally {
+      setRequestingId(null);
     }
   }
 
@@ -581,6 +664,13 @@ export function GroupPreviewPage({ groupId }: { groupId: number }) {
                 icon={<ReceiptLongRoundedIcon />}
                 iconPosition="start"
                 label="EXPENSES"
+                sx={{ minHeight: 54, fontWeight: 700 }}
+              />
+              <Tab
+                value="settlements"
+                icon={<AccountBalanceWalletRoundedIcon />}
+                iconPosition="start"
+                label="SETTLEMENTS"
                 sx={{ minHeight: 54, fontWeight: 700 }}
               />
               <Tab
@@ -964,6 +1054,139 @@ export function GroupPreviewPage({ groupId }: { groupId: number }) {
                 </Card>
               </Stack>
             </Box>
+          )}
+
+          {tabValue === "settlements" && (
+            <Stack spacing={3}>
+              {paySuccess && (
+                <Typography sx={{ color: "#27ae60", fontWeight: 700, bgcolor: "rgba(39,174,96,0.08)", px: 2, py: 1.2, borderRadius: 2 }}>
+                  ✓ {paySuccess}
+                </Typography>
+              )}
+              {payError && (
+                <Typography sx={{ color: "#cf2e2e", fontWeight: 700 }}>{payError}</Typography>
+              )}
+
+              {/* Net balance summary */}
+              <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr 1fr" } }}>
+                <Card sx={{ borderRadius: 1.5, bgcolor: "rgba(255,233,238,0.86)" }}>
+                  <CardContent sx={{ textAlign: "center", py: 3 }}>
+                    <Typography sx={{ color: "#9b9b9b", fontWeight: 800, letterSpacing: "0.08em", fontSize: 12 }}>YOU OWE</Typography>
+                    <Typography sx={{ mt: 1, fontSize: 36, fontWeight: 900, color: "#e74c3c", lineHeight: 1 }}>
+                      {formatMoney(balances?.totalYouOwe ?? 0)}
+                    </Typography>
+                  </CardContent>
+                </Card>
+                <Card sx={{ borderRadius: 1.5, bgcolor: "rgba(227,252,238,0.86)" }}>
+                  <CardContent sx={{ textAlign: "center", py: 3 }}>
+                    <Typography sx={{ color: "#9b9b9b", fontWeight: 800, letterSpacing: "0.08em", fontSize: 12 }}>OWED TO YOU</Typography>
+                    <Typography sx={{ mt: 1, fontSize: 36, fontWeight: 900, color: "#27ae60", lineHeight: 1 }}>
+                      {formatMoney(balances?.totalOwedToYou ?? 0)}
+                    </Typography>
+                  </CardContent>
+                </Card>
+                <Card sx={{ borderRadius: 1.5, bgcolor: "rgba(227,241,252,0.9)" }}>
+                  <CardContent sx={{ textAlign: "center", py: 3 }}>
+                    <Typography sx={{ color: "#9b9b9b", fontWeight: 800, letterSpacing: "0.08em", fontSize: 12 }}>NET</Typography>
+                    <Typography sx={{ mt: 1, fontSize: 36, fontWeight: 900, color: (balances?.net ?? 0) >= 0 ? "#27ae60" : "#e74c3c", lineHeight: 1 }}>
+                      {formatMoney(balances?.net ?? 0)}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Box>
+
+              {/* You owe */}
+              {(balances?.youOweTo?.length ?? 0) > 0 && (
+                <Box>
+                  <Typography variant="h5" sx={{ fontWeight: 800, mb: 1.5 }}>You owe</Typography>
+                  <Stack spacing={1.5}>
+                    {balances!.youOweTo.map((b) => (
+                      <Card key={b.userId} sx={{ borderRadius: 1.5, bgcolor: "rgba(255,255,255,0.88)", border: "1.5px solid rgba(231,76,60,0.18)" }}>
+                        <CardContent sx={{ p: 2.2 }}>
+                          <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} sx={{ alignItems: { sm: "center" }, justifyContent: "space-between" }}>
+                            <Box>
+                              <Typography sx={{ fontWeight: 800, fontSize: 20 }}>{b.username}</Typography>
+                              <Typography sx={{ color: "text.secondary", fontSize: 14 }}>{b.email}</Typography>
+                              <Typography sx={{ fontWeight: 900, fontSize: 22, color: "#e74c3c", mt: 0.5 }}>
+                                {formatMoney(Math.abs(b.amount))}
+                              </Typography>
+                            </Box>
+                            <Stack direction="row" spacing={1} sx={{ flexShrink: 0 }}>
+                              {b.wiseEmail && (
+                                <Button
+                                  variant="contained"
+                                  disabled={wisePayingId === b.userId}
+                                  onClick={() => void handleWisePayment(Number(b.userId), Math.abs(b.amount))}
+                                  sx={{
+                                    borderRadius: 999,
+                                    fontWeight: 800,
+                                    textTransform: "none",
+                                    bgcolor: "#00b9ff",
+                                    "&:hover": { bgcolor: "#009fd6" },
+                                  }}
+                                >
+                                  {wisePayingId === b.userId ? "Paying..." : "Pay with Wise"}
+                                </Button>
+                              )}
+                              <Button
+                                variant="outlined"
+                                disabled={wisePayingId === b.userId}
+                                onClick={() => void handleManualPayment(Number(b.userId), Math.abs(b.amount))}
+                                sx={{ borderRadius: 999, fontWeight: 800, textTransform: "none" }}
+                              >
+                                Mark as paid
+                              </Button>
+                            </Stack>
+                          </Stack>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </Stack>
+                </Box>
+              )}
+
+              {/* Others owe you */}
+              {(balances?.othersOweToYou?.length ?? 0) > 0 && (
+                <Box>
+                  <Typography variant="h5" sx={{ fontWeight: 800, mb: 1.5 }}>Owed to you</Typography>
+                  <Stack spacing={1.5}>
+                    {balances!.othersOweToYou.map((b) => (
+                      <Card key={b.userId} sx={{ borderRadius: 1.5, bgcolor: "rgba(255,255,255,0.88)", border: "1.5px solid rgba(39,174,96,0.18)" }}>
+                        <CardContent sx={{ p: 2.2 }}>
+                          <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} sx={{ alignItems: { sm: "center" }, justifyContent: "space-between" }}>
+                            <Box>
+                              <Typography sx={{ fontWeight: 800, fontSize: 20 }}>{b.username}</Typography>
+                              <Typography sx={{ color: "text.secondary", fontSize: 14 }}>{b.email}</Typography>
+                              <Typography sx={{ fontWeight: 900, fontSize: 22, color: "#27ae60", mt: 0.5 }}>
+                                {formatMoney(Math.abs(b.amount))}
+                              </Typography>
+                            </Box>
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              disabled={requestingId === b.userId}
+                              onClick={() => void handlePaymentRequest(Number(b.userId), Math.abs(b.amount))}
+                              sx={{ borderRadius: 999, fontWeight: 800, textTransform: "none", borderColor: "#27ae60", color: "#27ae60", "&:hover": { borderColor: "#219a52", bgcolor: "rgba(39,174,96,0.06)" } }}
+                            >
+                              {requestingId === b.userId ? "Requesting..." : "Request payment"}
+                            </Button>
+                          </Stack>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </Stack>
+                </Box>
+              )}
+
+              {balances?.totalYouOwe === 0 && balances?.totalOwedToYou === 0 && (
+                <Card sx={{ borderRadius: 1.5, bgcolor: "rgba(255,255,255,0.82)" }}>
+                  <CardContent sx={{ textAlign: "center", py: 4 }}>
+                    <Typography sx={{ fontSize: 48 }}>🎉</Typography>
+                    <Typography sx={{ fontWeight: 800, fontSize: 22, mt: 1 }}>All settled up!</Typography>
+                  </CardContent>
+                </Card>
+              )}
+            </Stack>
           )}
 
           {tabValue === "members" && (

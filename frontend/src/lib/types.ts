@@ -19,6 +19,7 @@ export interface UserBalance {
   userId: Id;
   username: string;
   email: string;
+  wiseEmail: string | null;
   amount: number;
 }
 

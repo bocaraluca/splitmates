@@ -59,6 +59,12 @@ export function getRole() {
   return window.localStorage.getItem(ROLE_KEY);
 }
 
+export function updateUsername(username: string) {
+  if (!isInBrowser()) return;
+  window.localStorage.setItem(USERNAME_KEY, username);
+  window.dispatchEvent(new CustomEvent("splitmates:username-changed", { detail: { username } }));
+}
+
 export function getPermissions() {
   if (!isInBrowser()) {
     return [] as string[];

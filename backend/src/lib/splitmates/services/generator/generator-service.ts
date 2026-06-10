@@ -56,7 +56,7 @@ async function createFakeExpense() {
     splitType: "equal",
     memberIds,
     shares: [],
-  });
+  }, { skipNotifications: true });
 
   state.generator.generatedCount += 1;
   emitEvent("generator.expenseCreated", expense);
@@ -90,12 +90,14 @@ export async function startGenerator(groupId?: Id | null) {
 export function stopGenerator() {
   const state = getState();
 
+  // Clear timer regardless of running state — handles edge cases from hot reload
   if (state.generator.timer) {
     clearInterval(state.generator.timer);
     state.generator.timer = null;
   }
 
   state.generator.running = false;
+  state.generator.groupId = null;
   emitEvent("generator.stopped", getGeneratorStatus());
   return getGeneratorStatus();
 }
