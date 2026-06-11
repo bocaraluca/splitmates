@@ -13,36 +13,6 @@ export async function createStripeAccount(userId: Id): Promise<string> {
     type: "custom",
     country: "US",
     capabilities: { card_payments: { requested: true }, transfers: { requested: true } },
-    business_type: "individual",
-    individual: {
-      first_name: "Test",
-      last_name: "User",
-      dob: { day: 1, month: 1, year: 1990 },
-      id_number: "000000000",
-      address: {
-        line1: "address_full_match",
-        city: "New York",
-        state: "NY",
-        postal_code: "10001",
-        country: "US",
-      },
-      ssn_last_4: "0000",
-    },
-    tos_acceptance: {
-      date: Math.floor(Date.now() / 1000),
-      ip: "127.0.0.1",
-    },
-    external_account: {
-      object: "bank_account",
-      country: "US",
-      currency: "usd",
-      routing_number: "110000000",
-      account_number: "000123456789",
-    },
-    business_profile: {
-      mcc: "7372",
-      url: "https://splitmates-lake.vercel.app",
-    },
   });
 
   await prisma.user.update({
