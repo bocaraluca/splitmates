@@ -55,7 +55,11 @@ export function SettingsPage() {
         setUsername(res.user.username);
         setEmail(res.user.email);
       })
-      .catch(() => router.push("/login"))
+      .catch((err) => {
+        const msg = err instanceof Error ? err.message : "";
+        if (msg.includes("503") || msg.includes("502") || msg.includes("Service")) return;
+        router.push("/login");
+      })
       .finally(() => setLoading(false));
   }, [token, router]);
 
@@ -131,8 +135,12 @@ export function SettingsPage() {
     setStripeMsg(null);
     try {
       const res = await fetchFromBackend<{ stripeAccountId: string }>("/profile/stripe", { method: "POST", token });
-      setProfile((prev) => prev ? { ...prev, stripeAccountId: res.stripeAccountId } : prev);
-      setStripeMsg({ text: "Stripe account connected.", error: false });
+      if (res?.stripeAccountId) {
+        setProfile((prev) => prev ? { ...prev, stripeAccountId: res.stripeAccountId } : prev);
+        setStripeMsg({ text: "Stripe account connected.", error: false });
+      } else {
+        setStripeMsg({ text: "Failed to connect Stripe. Try again.", error: true });
+      }
     } catch (error) {
       setStripeMsg({ text: error instanceof Error ? error.message : "Failed to connect Stripe.", error: true });
     } finally {

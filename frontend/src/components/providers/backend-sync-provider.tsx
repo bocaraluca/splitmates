@@ -27,6 +27,7 @@ export function BackendSyncProvider({ children }: { children: ReactNode }) {
   const socketRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<number | null>(null);
   const periodicSyncTimerRef = useRef<number | null>(null);
+  const keepAliveTimerRef = useRef<number | null>(null);
   const offlineRef = useRef(typeof window !== "undefined" ? !window.navigator.onLine : false);
   const intentionalCloseRef = useRef(false);
   const disposedRef = useRef(false);
@@ -171,6 +172,10 @@ export function BackendSyncProvider({ children }: { children: ReactNode }) {
       closeSocket();
     };
 
+    keepAliveTimerRef.current = window.setInterval(() => {
+      fetch("/api/backend/health").catch(() => {});
+    }, 14 * 60 * 1000);
+
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
     if (offlineRef.current) {
@@ -188,6 +193,7 @@ export function BackendSyncProvider({ children }: { children: ReactNode }) {
 
       clearReconnectTimer();
       stopPeriodicSync();
+      if (keepAliveTimerRef.current !== null) window.clearInterval(keepAliveTimerRef.current);
 
       closeSocket();
       socketRef.current = null;
