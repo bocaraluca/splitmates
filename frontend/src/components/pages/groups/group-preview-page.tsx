@@ -59,6 +59,7 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
   const [myUserId, setMyUserId] = useState<number | null>(null);
   const [stripePayingId, setStripePayingId] = useState<number | null>(null);
   const [requestingId, setRequestingId] = useState<number | null>(null);
+  const [requestedIds, setRequestedIds] = useState<Set<number>>(new Set());
   const [payError, setPayError] = useState<string | null>(null);
   const [paySuccess, setPaySuccess] = useState<string | null>(null);
 
@@ -105,10 +106,11 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
     try {
       const auth = token ? { token } : {};
 
-      const [expensesResponse, statsResponse, balancesResponse] = await Promise.all([
+      const [expensesResponse, statsResponse, balancesResponse, requestsResponse] = await Promise.all([
         fetchExpensePage(1),
         fetchFromBackend<{ stats: GroupStats }>(`/groups/${groupId}/stats`, auth),
         fetchFromBackend<{ summary: BalanceSummary }>(`/groups/${groupId}/balances`, auth),
+        fetchFromBackend<{ requests: { toUserId: number; status: string }[] }>(`/groups/${groupId}/payment-requests`, auth),
       ]);
 
       setExpenses(expensesResponse);
@@ -119,6 +121,8 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
 
       setStats(statsResponse.stats);
       setBalances(balancesResponse.summary);
+      const pending = new Set(requestsResponse.requests.filter((r) => r.status === "pending").map((r) => Number(r.toUserId)));
+      setRequestedIds(pending);
       setGroupError(null);
     } catch (error) {
       setGroupError(error instanceof Error ? error.message : "Unable to load group details.");
@@ -385,7 +389,8 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
         token,
         body: JSON.stringify({ toUserId, amount }),
       });
-      setPayError(null);
+      setRequestedIds((prev) => new Set([...prev, toUserId]));
+      setPaySuccess("Payment request sent!");
     } catch (error) {
       setPayError(error instanceof Error ? error.message : "Request failed.");
     } finally {
@@ -1017,11 +1022,11 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
                             <Button
                               variant="outlined"
                               size="small"
-                              disabled={requestingId === b.userId}
+                              disabled={requestingId === b.userId || requestedIds.has(Number(b.userId))}
                               onClick={() => void handlePaymentRequest(Number(b.userId), Math.abs(b.amount))}
                               sx={{ borderRadius: 999, fontWeight: 800, textTransform: "none", borderColor: "#27ae60", color: "#27ae60", "&:hover": { borderColor: "#219a52", bgcolor: "rgba(39,174,96,0.06)" } }}
                             >
-                              {requestingId === b.userId ? "Requesting..." : "Request payment"}
+                              {requestingId === b.userId ? "Requesting..." : requestedIds.has(Number(b.userId)) ? "Payment already requested" : "Request payment"}
                             </Button>
                           </Stack>
                         </CardContent>

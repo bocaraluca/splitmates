@@ -50,6 +50,11 @@ export async function POST(request: Request, context: { params: Promise<{ groupI
     if (toUserId === actor.id) return jsonError("You cannot request payment from yourself.", 400);
     if (!group.memberIds.includes(toUserId)) return jsonError("User is not in this group.", 400);
 
+    const existing = await prisma.paymentRequest.findFirst({
+      where: { groupId, fromUserId: actor.id, toUserId, status: "pending" },
+    });
+    if (existing) return jsonError("Payment already requested.", 400);
+
     const paymentRequest = await prisma.paymentRequest.create({
       data: { groupId, fromUserId: actor.id, toUserId, amount },
     });
