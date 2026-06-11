@@ -22,5 +22,3 @@ export function subscribeToEvents(listener: (payload: ApiEventPayload) => void) 
     state.emitter.off("change", handler);
   };
 }
-
-

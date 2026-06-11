@@ -20,7 +20,7 @@ export interface UserBalance {
   userId: Id;
   username: string;
   email: string;
-  wiseEmail: string | null;
+  stripeAccountId: string | null;
   amount: number;
 }
 
@@ -43,6 +43,8 @@ export interface DashboardSummary {
   user: User;
   overall: BalanceSummary;
   groups: GroupBalance[];
+  categoryStats: CategoryStat[];
+  monthlyStats: MonthStat[];
 }
 
 export interface GroupSummary {

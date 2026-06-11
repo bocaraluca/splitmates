@@ -119,7 +119,7 @@ export async function createExpense(groupId: Id, actorUserId: Id, input: Expense
   const memberIds = input.splitType === "equal" 
     ? (input.memberIds.length > 0 ? input.memberIds : group.members.map(m => m.userId)) 
     : input.shares.map((share) => share.userId);
-  
+
   const validatedMemberIds = Array.from(new Set(memberIds));
   if (validatedMemberIds.length === 0) {
     throw new Error("At least one member is required for the split.");
@@ -194,7 +194,7 @@ export async function updateExpense(groupId: Id, expenseId: Id, actorUserId: Id,
   const memberIds = input.splitType === "equal" 
     ? (input.memberIds.length > 0 ? input.memberIds : group.members.map(m => m.userId)) 
     : input.shares.map((share) => share.userId);
-  
+
   const validatedMemberIds = Array.from(new Set(memberIds));
   if (validatedMemberIds.length === 0) {
     throw new Error("At least one member is required for the split.");
@@ -360,5 +360,3 @@ export async function getPayments(groupId: Id) {
     where: { groupId }
   });
 }
-
-

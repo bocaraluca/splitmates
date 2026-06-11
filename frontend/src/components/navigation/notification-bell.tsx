@@ -7,41 +7,41 @@ import { Badge, IconButton } from "@mui/material";
 import { fetchFromBackend } from "@/lib/backend-api";
 import { getToken } from "@/lib/auth-storage";
 
-interface Notification {
-  id: number;
-  read: boolean;
-}
-
 export function NotificationBell() {
   const router = useRouter();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const token = getToken();
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
-
-  const fetchNotifications = useCallback(async () => {
+  const fetchUnread = useCallback(async () => {
     if (!token) return;
     try {
-      const res = await fetchFromBackend<{ notifications: Notification[] }>("/notifications", { token });
-      setNotifications(res.notifications);
+      const res = await fetchFromBackend<{ notifications: { read: boolean }[] }>("/notifications", { token });
+      setUnreadCount(res.notifications.filter((n) => !n.read).length);
     } catch {
-      // silent fail
+
     }
   }, [token]);
 
   useEffect(() => {
-    void fetchNotifications();
-    intervalRef.current = setInterval(() => void fetchNotifications(), 30000);
+    void fetchUnread();
+    intervalRef.current = setInterval(() => void fetchUnread(), 30000);
 
-    const handleChanged = () => { void fetchNotifications(); };
+    const handleChanged = (e: Event) => {
+      const detail = (e as CustomEvent<{ unread?: number }>).detail;
+      if (typeof detail?.unread === "number") {
+        setUnreadCount(detail.unread);
+      } else {
+        void fetchUnread();
+      }
+    };
 
     window.addEventListener("splitmates:notifications-changed", handleChanged);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
       window.removeEventListener("splitmates:notifications-changed", handleChanged);
     };
-  }, [fetchNotifications]);
+  }, [fetchUnread]);
 
   return (
     <IconButton

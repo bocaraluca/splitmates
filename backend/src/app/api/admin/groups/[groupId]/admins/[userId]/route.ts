@@ -55,7 +55,6 @@ export async function DELETE(
       return jsonError("Invalid group id or user id.", 400);
     }
 
-    // Check if group exists
     const group = await prisma.group.findUnique({
       where: { id: groupIdForLog },
     });
@@ -71,7 +70,6 @@ export async function DELETE(
       return jsonError("Group not found.", 404);
     }
 
-    // Check if user is in the group
     const membership = await prisma.groupMember.findUnique({
       where: { groupId_userId: { groupId: groupIdForLog, userId: userIdForLog } },
     });
@@ -87,7 +85,6 @@ export async function DELETE(
       return jsonError("User is not a member of this group.", 404);
     }
 
-    // Remove admin status
     const updatedMembership = await prisma.groupMember.update({
       where: { groupId_userId: { groupId: groupIdForLog, userId: userIdForLog } },
       data: { isAdmin: false },

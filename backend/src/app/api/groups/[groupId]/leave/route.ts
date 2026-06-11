@@ -55,4 +55,3 @@ export async function POST(request: Request, context: { params: Promise<{ groupI
     return jsonError(message, 400);
   }
 }
-

@@ -7,15 +7,18 @@ import { fetchFromBackend } from "@/lib/backend-api";
 
 const fieldSx = {
   "& .MuiOutlinedInput-root": {
-    borderRadius: 1,
-    backgroundColor: "#d5deea",
-    "& fieldset": { borderColor: "#ccd4e0" },
-    "&:hover fieldset": { borderColor: "#b9c2d0" },
-    "&.Mui-focused fieldset": { borderColor: "#aeb8c8" },
+    borderRadius: 1.5,
+    backgroundColor: "rgba(255,255,255,0.07)",
+    color: "white",
+    "& fieldset": { borderColor: "rgba(255,255,255,0.15)" },
+    "&:hover fieldset": { borderColor: "rgba(255,255,255,0.3)" },
+    "&.Mui-focused fieldset": { borderColor: "#e83ea8" },
+    "& input::placeholder": { color: "rgba(255,255,255,0.3)", opacity: 1 },
   },
+  "& .MuiInputBase-input": { color: "white" },
 } as const;
 
-const labelSx = { fontSize: 16, fontWeight: 800, color: "#2f3137" } as const;
+const labelSx = { fontSize: 15, fontWeight: 700, color: "rgba(255,255,255,0.75)" } as const;
 
 export function MagicLinkPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -67,22 +70,18 @@ export function MagicLinkPage() {
           zIndex: 3,
           color: "white",
           fontWeight: 900,
-          fontSize: { xs: 17, md: 19 },
-          lineHeight: 1.15,
-          minWidth: "auto",
-          px: 1.6,
-          py: 1,
-          textTransform: "none",
-          backgroundColor: "rgba(255, 255, 255, 0.16)",
-          border: "1px solid rgba(255, 255, 255, 0.22)",
+          fontSize: 22,
+          minWidth: 0,
+          px: 2.2,
+          py: 0.7,
+          backgroundColor: "rgba(255,255,255,0.16)",
+          border: "1px solid rgba(255,255,255,0.22)",
           backdropFilter: "blur(10px)",
-          boxShadow: "0 6px 18px rgba(0, 0, 0, 0.12)",
-          "&:hover": {
-            backgroundColor: "rgba(255, 255, 255, 0.24)",
-          },
+          borderRadius: 999,
+          "&:hover": { backgroundColor: "rgba(255,255,255,0.24)" },
         }}
       >
-        ← Back to Login
+        ←
       </Button>
 
       <Box
@@ -113,13 +112,14 @@ export function MagicLinkPage() {
             justifySelf: { xs: "center", lg: "stretch" },
             width: "100%",
             maxWidth: 520,
-            background: "rgba(239, 239, 239, 0.72)",
-            borderRadius: 2,
+            background: "rgba(10,5,30,0.72)",
+            borderRadius: 3,
             px: { xs: 3, md: 5.5 },
             py: { xs: 4, md: 5 },
-            boxShadow: "0 8px 26px rgba(28, 28, 52, 0.10)",
-            backdropFilter: "blur(18px)",
-            border: "1px solid rgba(255,255,255,0.58)",
+            boxShadow: "0 24px 60px rgba(0,0,0,0.5)",
+            backdropFilter: "blur(24px)",
+            WebkitBackdropFilter: "blur(24px)",
+            border: "1px solid rgba(255,255,255,0.12)",
           }}
         >
           <Typography
@@ -128,13 +128,13 @@ export function MagicLinkPage() {
               fontSize: { xs: 40, md: 50 },
               fontWeight: 900,
               lineHeight: 0.92,
-              color: "#2f3137",
+              color: "white",
             }}
           >
             Magic link
           </Typography>
 
-          <Typography sx={{ mt: 1.2, color: "#6f727a", fontSize: 14 }}>
+          <Typography sx={{ mt: 1.2, color: "rgba(255,255,255,0.5)", fontSize: 14 }}>
             Enter your email and we'll send you a link to log in instantly.
           </Typography>
 
@@ -154,12 +154,12 @@ export function MagicLinkPage() {
                   fontSize: { xs: 18, md: 22 },
                   fontWeight: 800,
                   textTransform: "none",
-                  background: "#e992a2",
-                  boxShadow: "0 8px 20px rgba(209, 133, 153, 0.35)",
+                  background: "linear-gradient(90deg, #e83ea8, #8b5cf6)",
+                  boxShadow: "0 8px 24px rgba(232,62,168,0.4)",
                   width: "100%",
                   maxWidth: 260,
                   justifySelf: "center",
-                  "&:hover": { boxShadow: "0 8px 20px rgba(209, 133, 153, 0.35)", background: "#de8697" },
+                  "&:hover": { boxShadow: "0 8px 24px rgba(232,62,168,0.5)", opacity: 0.92 },
                 }}
               >
                 {loading ? "Sending..." : "Send link"}
@@ -173,10 +173,10 @@ export function MagicLinkPage() {
             </Box>
           ) : (
             <Box sx={{ mt: 3 }}>
-              <Typography sx={{ color: "#3a7d44", fontWeight: 700, fontSize: 14 }}>
+              <Typography sx={{ color: "#34d399", fontWeight: 700, fontSize: 14 }}>
                 Check your inbox! A login link has been sent to your email.
               </Typography>
-              <Typography variant="body2" sx={{ mt: 1.5, color: "#6f727a", fontSize: 13 }}>
+              <Typography variant="body2" sx={{ mt: 1.5, color: "rgba(255,255,255,0.4)", fontSize: 13 }}>
                 The link expires in 1 hour. You can close this page.
               </Typography>
             </Box>

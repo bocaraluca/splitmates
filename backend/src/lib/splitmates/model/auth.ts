@@ -6,4 +6,3 @@ export interface LoginResponse {
   role: string;
   permissions: string[];
 }
-

@@ -188,7 +188,7 @@ export function GroupsPage() {
 
           {shouldShowSections ? (
             <Stack spacing={4}>
-              {/* Your Groups Section */}
+
               <Box>
                 <Typography variant="h3" sx={{ fontSize: { xs: 24, md: 32 }, fontWeight: 800, mb: 3 }}>
                   Your groups
@@ -202,7 +202,6 @@ export function GroupsPage() {
                 </Box>
               </Box>
 
-              {/* All Other Groups Section */}
               {allOtherGroups.length > 0 && (
                 <Box>
                   <Typography variant="h3" sx={{ fontSize: { xs: 24, md: 32 }, fontWeight: 800, mb: 3 }}>

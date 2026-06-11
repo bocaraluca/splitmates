@@ -1,7 +1,7 @@
 import { prisma } from "../../prisma.ts";
 import type { Id } from "../model/types";
 
-type NotificationType = "group_added" | "expense_added" | "payment_request" | "payment_received" | "payment_failed" | "chat_message";
+type NotificationType = "group_added" | "expense_added" | "payment_request" | "payment_received" | "payment_failed" | "chat_message" | "suspicious_user";
 
 async function create(params: {
   userId: Id;
@@ -16,7 +16,7 @@ async function create(params: {
   return prisma.notification.create({
     data: {
       userId: Number(params.userId),
-      type: params.type,
+      type: params.type as never,
       title: params.title,
       body: params.body,
       groupId: params.groupId ? Number(params.groupId) : null,
@@ -152,4 +152,24 @@ export async function deleteAllNotifications(userId: Id) {
   return prisma.notification.deleteMany({
     where: { userId: Number(userId) },
   });
+}
+
+export async function notifyAdminsSuspiciousUser(suspiciousUserId: number, suspiciousUsername: string) {
+  const admins = await prisma.user.findMany({
+    where: { role: { title: "admin" } },
+    select: { id: true },
+  });
+
+  if (!admins.length) return;
+
+  await Promise.all(
+    admins.map((admin) =>
+      create({
+        userId: admin.id,
+        type: "suspicious_user",
+        title: "Suspicious user detected",
+        body: `User "${suspiciousUsername}" has been flagged for suspicious activity.`,
+      })
+    )
+  );
 }

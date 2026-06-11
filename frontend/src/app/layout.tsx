@@ -16,7 +16,11 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "SplitMates",
-  description: "Frontend connected to the local backend API.",
+  description: "Shared expenses management app",
+  icons: {
+    icon: "/assets/logo.png",
+    apple: "/assets/logo.png",
+  },
 };
 
 export default function RootLayout({

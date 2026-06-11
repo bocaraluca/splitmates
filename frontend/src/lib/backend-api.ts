@@ -203,13 +203,10 @@ function getPendingDeletionsForGroup(groupId: number): Set<number> {
   return new Set(map[String(groupId)] ?? []);
 }
 
- 
 export function markExpenseDeleted(groupId: number, expenseId: number) {
   removeExpenseFromOfflineCache(groupId, expenseId);
   markExpenseDeletionPending(groupId, expenseId);
 }
-
-
 
 function parseExpenseListPath(path: string): { groupId: number } | null {
   const normalizedPath = path.split("?")[0];
@@ -277,8 +274,6 @@ function isPendingDeletedExpenseDetail(path: string): boolean {
   return getPendingDeletionsForGroup(detail.groupId).has(detail.expenseId);
 }
 
-
-
 function buildOfflineMutationResponse<T>(path: string, init: RequestInit & { token?: string }) {
   const method = (init.method ?? "GET").toUpperCase();
   const body = parseStoredBody(serializeBody(init.body));
@@ -286,7 +281,7 @@ function buildOfflineMutationResponse<T>(path: string, init: RequestInit & { tok
   const parts = normalizedPath.split("/").filter(Boolean);
 
   if (parts[0] === "auth") {
-    throw new BackendError("You are offline. Authentication requires the backend.", 503, null);
+    throw new BackendError("Authentication requires the backend.", 503, null);
   }
 
   if (parts[0] === "groups" && method !== "GET" && !normalizedPath.includes("/expenses")) {
@@ -321,8 +316,6 @@ function buildOfflineMutationResponse<T>(path: string, init: RequestInit & { tok
 
   return body as T;
 }
-
-
 
 async function executeBackendFetch<T>(
   path: string,
@@ -380,18 +373,23 @@ export async function fetchFromBackend<T>(path: string, init: RequestInit & { to
     }
 
     if (isMutation(method) && (isOfflineNetworkError(error) || isBackendUnavailableError(error))) {
-      const queue = readOfflineQueue();
-      queue.push({
-        path,
-        init: {
-          method,
-          headers: serializeHeaders(init.headers),
-          body: serializeBody(init.body),
-          token: init.token,
-        },
-        timestamp: Date.now(),
-      });
-      writeOfflineQueue(queue);
+      const normalizedPath = path.split("?")[0];
+      const firstSegment = normalizedPath.split("/").filter(Boolean)[0];
+      const shouldNotQueue = firstSegment === "auth" || firstSegment === "notifications";
+      if (!shouldNotQueue) {
+        const queue = readOfflineQueue();
+        queue.push({
+          path,
+          init: {
+            method,
+            headers: serializeHeaders(init.headers),
+            body: serializeBody(init.body),
+            token: init.token,
+          },
+          timestamp: Date.now(),
+        });
+        writeOfflineQueue(queue);
+      }
       return buildOfflineMutationResponse<T>(path, init);
     }
 
@@ -402,8 +400,6 @@ export async function fetchFromBackend<T>(path: string, init: RequestInit & { to
     throw new BackendError("Unable to reach the backend.", 503, error);
   }
 }
-
-
 
 function isExpenseListCacheKey(cacheKey: string, groupId: number) {
   const prefix = `/groups/${groupId}/expenses`;
@@ -476,8 +472,6 @@ export function updateExpenseInOfflineCache(groupId: number, item: Record<string
     );
   });
 }
-
-
 
 interface SyncResult {
   synced: number;
@@ -554,7 +548,7 @@ async function drainOfflineQueue(): Promise<SyncResult> {
             synced += 1;
             continue;
           } catch {
-            
+
           }
         }
 
@@ -570,7 +564,7 @@ async function drainOfflineQueue(): Promise<SyncResult> {
             synced += 1;
             continue;
           } catch {
-            
+
           }
         }
       }

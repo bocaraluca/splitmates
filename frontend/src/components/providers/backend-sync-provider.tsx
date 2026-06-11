@@ -1,15 +1,27 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect, useRef, useState } from "react";
-import { Alert, Box } from "@mui/material";
+import { useEffect, useRef } from "react";
 import { backendWebSocketUrl, syncPendingBackendRequests } from "@/lib/backend-api";
+
+function purgeAuthFromOfflineQueue() {
+  if (typeof window === "undefined") return;
+  const key = "splitmates.offline.queue";
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return;
+    const queue = JSON.parse(raw) as Array<{ path: string }>;
+    const cleaned = queue.filter((item) => {
+      const first = item.path.split("?")[0].split("/").filter(Boolean)[0];
+      return first !== "auth" && first !== "notifications";
+    });
+    localStorage.setItem(key, JSON.stringify(cleaned));
+  } catch {}
+}
 
 function emitBackendUpdate(detail: unknown) {
   window.dispatchEvent(new CustomEvent("splitmates:backend-update", { detail }));
 }
-
-const OFFLINE_BANNER_TEXT = "You are offline. Changes will be saved locally until the connection is back.";
 
 export function BackendSyncProvider({ children }: { children: ReactNode }) {
   const socketRef = useRef<WebSocket | null>(null);
@@ -18,10 +30,6 @@ export function BackendSyncProvider({ children }: { children: ReactNode }) {
   const offlineRef = useRef(typeof window !== "undefined" ? !window.navigator.onLine : false);
   const intentionalCloseRef = useRef(false);
   const disposedRef = useRef(false);
-  const [offlineMessage, setOfflineMessage] = useState<string | null>(() => {
-    if (typeof window === "undefined") return null;
-    return !window.navigator.onLine ? OFFLINE_BANNER_TEXT : null;
-  });
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -29,6 +37,7 @@ export function BackendSyncProvider({ children }: { children: ReactNode }) {
     }
 
     disposedRef.current = false;
+    purgeAuthFromOfflineQueue();
 
     const clearReconnectTimer = () => {
       if (reconnectTimerRef.current !== null) {
@@ -56,13 +65,11 @@ export function BackendSyncProvider({ children }: { children: ReactNode }) {
 
     const markOffline = () => {
       offlineRef.current = true;
-      setOfflineMessage(OFFLINE_BANNER_TEXT);
       stopPeriodicSync();
     };
 
     const markOnline = () => {
       offlineRef.current = false;
-      setOfflineMessage(null);
       startPeriodicSync();
     };
 
@@ -187,26 +194,5 @@ export function BackendSyncProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  return (
-    <>
-      {offlineMessage ? (
-        <Box sx={{ position: "sticky", top: 0, zIndex: 1500 }} role="status" aria-live="polite">
-          <Alert
-            severity="error"
-            variant="filled"
-            sx={{
-              borderRadius: 0,
-              justifyContent: "center",
-              alignItems: "center",
-              fontWeight: 700,
-              boxShadow: "0 10px 24px rgba(0, 0, 0, 0.12)",
-            }}
-          >
-            {offlineMessage}
-          </Alert>
-        </Box>
-      ) : null}
-      {children}
-    </>
-  );
+  return <>{children}</>;
 }

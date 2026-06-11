@@ -21,31 +21,31 @@ interface BadHabitsData {
 type Period = "month" | "6months" | "year";
 
 const ITEMS = [
-  // Experiences
+
   { cat: "experiences", emoji: "🎬", label: "Cinema + snacks",            price: 50   },
   { cat: "experiences", emoji: "🎭", label: "Ballet show ticket",          price: 200  },
   { cat: "experiences", emoji: "🎵", label: "Concert ticket",              price: 300  },
   { cat: "experiences", emoji: "🍽️", label: "Fine dining meal",            price: 400  },
-  // Health & Wellness
+
   { cat: "health",      emoji: "🏋️", label: "Gym membership (1 month)",    price: 180  },
   { cat: "health",      emoji: "🦷", label: "Dental check-up & cleaning",  price: 250  },
   { cat: "health",      emoji: "🩺", label: "Full medical check-up",       price: 300  },
   { cat: "health",      emoji: "🧖", label: "Full day at a SPA",           price: 350  },
   { cat: "health",      emoji: "🏃", label: "Personal trainer (4 sessions)", price: 600 },
   { cat: "health",      emoji: "🌿", label: "Wellness retreat (3 nights)", price: 2000 },
-  // Tech
+
   { cat: "tech",        emoji: "🎵", label: "AirPods Pro 2",               price: 950  },
   { cat: "tech",        emoji: "🎮", label: "Nintendo Switch 2",           price: 2499 },
   { cat: "tech",        emoji: "🎮", label: "PS5 Console",                 price: 2900 },
   { cat: "tech",        emoji: "📱", label: "Samsung Galaxy S25",          price: 3675 },
   { cat: "tech",        emoji: "📱", label: "iPhone 17",                   price: 4370 },
   { cat: "tech",        emoji: "💻", label: "Gaming Laptop",               price: 5000 },
-  // Travel
+
   { cat: "travel",      emoji: "✈️", label: "Flight to Italy",       price: 250  },
   { cat: "travel",      emoji: "🌊", label: "Weekend at the seaside",      price: 1000 },
   { cat: "travel",      emoji: "🏝️", label: "5-days holiday in Greece",    price: 5500 },
   { cat: "travel",      emoji: "🏝️", label: "7-nights vacation in Maldives",          price: 7140 },
-  // Self-development
+
   { cat: "growth",      emoji: "📚", label: "Book",             price: 60   },
   { cat: "growth",      emoji: "🎓", label: "Online course",  price: 120  },
   { cat: "growth",      emoji: "🗣️", label: "Language class (1 month)",    price: 400  },
@@ -90,7 +90,7 @@ export function BadHabitsPage() {
     try {
       const res = await fetchFromBackend<BadHabitsData>(`/insights/bad-habits?period=${p}`, { token });
       setData(res);
-    } catch { /* silent */ } finally { setLoading(false); }
+    } catch {  } finally { setLoading(false); }
   }, [token]);
 
   useEffect(() => { void fetchData(period); }, [fetchData, period]);
@@ -111,9 +111,8 @@ export function BadHabitsPage() {
       <AppNavbar />
       <Container maxWidth="xl" sx={{ py: { xs: 3, md: 5 } }}>
 
-        {/* Page title + period selector */}
         <Stack direction={{ xs: "column", sm: "row" }} sx={{ alignItems: { xs: "flex-start", sm: "center" }, justifyContent: "space-between", mb: 4, gap: 2 }}>
-          <Typography variant="h4" sx={{ fontWeight: 900 }}>Bad Spending Habits</Typography>
+          <Typography variant="h4" sx={{ fontWeight: 900 }}>Bad spending habits</Typography>
           <ToggleButtonGroup
             value={period} exclusive
             onChange={(_, v) => { if (v) setPeriod(v as Period); }}
@@ -145,13 +144,11 @@ export function BadHabitsPage() {
             </CardContent>
           </Card>
         ) : (
-          /* ── Two-column layout on desktop ── */
+
           <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "380px 1fr" }, gap: { xs: 3, lg: 10 }, alignItems: "start" }}>
 
-            {/* LEFT COLUMN — totals, investment, breakdown */}
             <Stack spacing={2.5}>
 
-              {/* Total wasted hero */}
               <Card sx={{
                 background: "linear-gradient(145deg, rgba(232,62,168,0.22) 0%, rgba(111,41,198,0.18) 100%)",
                 border: "1px solid rgba(232,62,168,0.25)", borderRadius: 3,
@@ -175,7 +172,6 @@ export function BadHabitsPage() {
                 </CardContent>
               </Card>
 
-              {/* Investment */}
               <Card sx={{
                 background: "linear-gradient(145deg, rgba(86,201,239,0.12) 0%, rgba(111,41,198,0.12) 100%)",
                 border: "1px solid rgba(86,201,239,0.18)", borderRadius: 3,
@@ -191,9 +187,8 @@ export function BadHabitsPage() {
                   <Stack spacing={1.5}>
                     {[
                       { label: "1 year",   value: data.projections.invested1Year,   pct: 15 },
-                      { label: "5 years",  value: data.projections.invested5Years,  pct: 40 },
-                      { label: "10 years", value: data.projections.invested10Years, pct: 70 },
-                      { label: "20 years", value: data.projections.invested20Years, pct: 100 },
+                      { label: "5 years",  value: data.projections.invested5Years,  pct: 50 },
+                      { label: "10 years", value: data.projections.invested10Years, pct: 100 },
                     ].map((item) => (
                       <Box key={item.label}>
                         <Stack direction="row" sx={{ justifyContent: "space-between", mb: 0.6 }}>
@@ -214,7 +209,6 @@ export function BadHabitsPage() {
                 </CardContent>
               </Card>
 
-              {/* Where money went */}
               {data.byCategory.length > 0 && (
                 <Card sx={{ bgcolor: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 3 }}>
                   <CardContent sx={{ p: 3 }}>
@@ -247,7 +241,6 @@ export function BadHabitsPage() {
               )}
             </Stack>
 
-            {/* RIGHT COLUMN — things you could have bought */}
             <Box>
               {Object.keys(byCat).length > 0 ? (
                 <Stack spacing={3}>
@@ -322,7 +315,7 @@ export function BadHabitsPage() {
               ) : (
                 <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", minHeight: 200 }}>
                   <Typography sx={{ color: "rgba(255,255,255,0.3)", fontSize: 14 }}>
-                    Spend a bit more to unlock comparisons
+                    You're doing great — no bad habits spending detected!
                   </Typography>
                 </Box>
               )}

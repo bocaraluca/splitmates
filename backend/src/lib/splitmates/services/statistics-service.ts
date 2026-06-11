@@ -48,7 +48,7 @@ async function buildBalanceMap(groupId?: Id): Promise<BalanceMap> {
       if (partUserId === paidById) {
         continue;
       }
-      
+
       const amount = parseAmount(participant.amount);
       touch(partUserId, paidById, amount);
     }
@@ -70,7 +70,7 @@ async function buildBalanceMap(groupId?: Id): Promise<BalanceMap> {
 }
 
 function simplifyDebts(balances: BalanceMap): BalanceMap {
-  // Calculate net balance per user (positive = owed money, negative = owes money)
+
   const net = new Map<number, number>();
 
   for (const [fromId, row] of balances.entries()) {
@@ -81,7 +81,6 @@ function simplifyDebts(balances: BalanceMap): BalanceMap {
     }
   }
 
-  // Split into debtors (owe money) and creditors (are owed money)
   const debtors: { id: number; amount: number }[] = [];
   const creditors: { id: number; amount: number }[] = [];
 
@@ -90,7 +89,6 @@ function simplifyDebts(balances: BalanceMap): BalanceMap {
     else if (balance > 0.005) creditors.push({ id: userId, amount: balance });
   }
 
-  // Greedy matching — minimizes number of transactions
   const simplified: BalanceMap = new Map();
   const touch = (fromId: number, toId: number, amount: number) => {
     if (!simplified.has(fromId)) simplified.set(fromId, new Map());
@@ -121,7 +119,7 @@ function simplifyDebts(balances: BalanceMap): BalanceMap {
 export async function balanceSummaryForUser(userId: Id, groupId?: Id): Promise<BalanceSummary> {
   const numUserId = Number(userId);
   const numGroupId = toNum(groupId);
-  
+
   const balances = await buildBalanceMap(numGroupId);
   const youOweTo: UserBalance[] = [];
   const othersOweToYou: UserBalance[] = [];
@@ -157,17 +155,17 @@ export async function balanceSummaryForUser(userId: Id, groupId?: Id): Promise<B
 
     for (const [toUserId, amount] of row.entries()) {
       const toUser = userLookup.get(toUserId);
-      
+
       if (!fromUser || !toUser) continue;
 
       if (fromUserId === numUserId) {
         totalYouOwe = roundMoney(totalYouOwe + amount);
-        youOweTo.push({ userId: toUser.id, username: toUser.username, email: toUser.email, wiseEmail: toUser.wiseEmail ?? null, amount });
+        youOweTo.push({ userId: toUser.id, username: toUser.username, email: toUser.email, stripeAccountId: toUser.stripeAccountId ?? null, amount });
       }
 
       if (toUserId === numUserId) {
         totalOwedToYou = roundMoney(totalOwedToYou + amount);
-        othersOweToYou.push({ userId: fromUser.id, username: fromUser.username, email: fromUser.email, wiseEmail: fromUser.wiseEmail ?? null, amount });
+        othersOweToYou.push({ userId: fromUser.id, username: fromUser.username, email: fromUser.email, stripeAccountId: fromUser.stripeAccountId ?? null, amount });
       }
     }
   }
@@ -229,7 +227,7 @@ async function calculateMonthlyStats(groupId: Id) {
     const date = new Date(expense.date);
     const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
     const index = monthKeys.indexOf(key);
-    
+
     if (index >= 0) {
       const amount = parseAmount(expense.amount);
       months[index].amount = roundMoney(months[index].amount + amount);
@@ -258,7 +256,7 @@ export async function getGroupStats(groupId: Id): Promise<GroupStats | null> {
   const { totalSpent, categories } = await calculateCategoryStats(numGroupId);
   const months = await calculateMonthlyStats(numGroupId);
   const topCategory = categories[0] ?? null;
-  
+
   const firstMemberId = group.members[0]?.userId ? Number(group.members[0].userId) : 0;
   const balance = await balanceSummaryForUser(firstMemberId, numGroupId);
 
@@ -294,27 +292,59 @@ export async function getDashboardSummary(userId: Id): Promise<DashboardSummary>
   }
 
   const groups = await prisma.group.findMany({
-    where: {
-      members: {
-        some: { userId: numUserId },
-      },
-    },
+    where: { members: { some: { userId: numUserId } } },
   });
 
-  const groupSummaries = await Promise.all(
-    groups.map(async (group) => ({
-      groupId: group.id,
-      groupName: group.name,
-      category: group.category,
-      ...(await balanceSummaryForUser(numUserId, group.id)),
-    }))
-  );
+  const [groupSummaries, overall, allUserExpenses] = await Promise.all([
+    Promise.all(
+      groups.map(async (group) => ({
+        groupId: group.id,
+        groupName: group.name,
+        category: group.category,
+        ...(await balanceSummaryForUser(numUserId, group.id)),
+      }))
+    ),
+    balanceSummaryForUser(numUserId),
+    prisma.expense.findMany({
+      where: { paidByUserId: numUserId },
+    }),
+  ]);
 
-  const overall = await balanceSummaryForUser(numUserId);
+  const categoryAmounts = new Map<ExpenseCategory, number>();
+  let totalSpentAll = 0;
+  for (const e of allUserExpenses) {
+    const amount = parseAmount(e.amount);
+    totalSpentAll = roundMoney(totalSpentAll + amount);
+    categoryAmounts.set(e.category as ExpenseCategory, roundMoney((categoryAmounts.get(e.category as ExpenseCategory) ?? 0) + amount));
+  }
+  const categoryStats: CategoryStat[] = Array.from(categoryAmounts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .map(([category, amount]) => ({
+      category,
+      amount,
+      percentage: totalSpentAll > 0 ? roundMoney((amount / totalSpentAll) * 100) : 0,
+    }));
+
+  const now = new Date();
+  const monthKeys: string[] = [];
+  const monthlyStats: MonthStat[] = [];
+  for (let offset = 5; offset >= 0; offset--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - offset, 1);
+    monthKeys.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+    monthlyStats.push({ month: d.toLocaleString("en-US", { month: "short" }), amount: 0 });
+  }
+  for (const e of allUserExpenses) {
+    const d = new Date(e.date);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const idx = monthKeys.indexOf(key);
+    if (idx >= 0) monthlyStats[idx].amount = roundMoney(monthlyStats[idx].amount + parseAmount(e.amount));
+  }
 
   return {
     user: { id: user.id, username: user.username, email: user.email, createdAt: user.createdAt.toISOString() },
     overall,
     groups: groupSummaries,
+    categoryStats,
+    monthlyStats,
   };
 }

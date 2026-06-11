@@ -32,4 +32,3 @@ export function jsonClearSession(message = "Logged out.") {
   });
   return response;
 }
-

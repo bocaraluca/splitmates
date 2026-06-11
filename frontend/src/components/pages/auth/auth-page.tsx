@@ -62,7 +62,12 @@ export function AuthPage({ mode }: { mode: "login" | "signup" }) {
       login(response.user.username, response.token, response.role, response.permissions);
       router.push(response.role === "admin" ? "/admin" : "/dashboard");
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Authentication failed.");
+      const status = (error as { status?: number }).status;
+      if (status === 503 || status === 502 || status === 504) {
+        setErrorMessage("Server temporarily unavailable. Please try again in a few seconds.");
+      } else {
+        setErrorMessage("Invalid login credentials.");
+      }
     }
   }
 
@@ -89,13 +94,19 @@ export function AuthPage({ mode }: { mode: "login" | "signup" }) {
           left: 14,
           zIndex: 3,
           color: "white",
-          fontWeight: 700,
-          fontSize: { xs: 13, md: 14 },
-          minWidth: "auto",
-          px: 0.6,
+          fontWeight: 900,
+          fontSize: 22,
+          minWidth: 0,
+          px: 2.2,
+          py: 0.7,
+          backgroundColor: "rgba(255,255,255,0.16)",
+          border: "1px solid rgba(255,255,255,0.22)",
+          backdropFilter: "blur(10px)",
+          borderRadius: 999,
+          "&:hover": { backgroundColor: "rgba(255,255,255,0.24)" },
         }}
       >
-        ← Back to Home Page
+        ←
       </Button>
 
       <Box
@@ -129,7 +140,7 @@ export function AuthPage({ mode }: { mode: "login" | "signup" }) {
             background: "rgba(10,5,30,0.72)",
             borderRadius: 3,
             px: { xs: 3, md: 5.5 },
-            py: { xs: 4, md: 5 },
+            py: { xs: 2.5, md: 3.5 },
             boxShadow: "0 24px 60px rgba(0,0,0,0.5)",
             backdropFilter: "blur(24px)",
             WebkitBackdropFilter: "blur(24px)",
@@ -156,25 +167,25 @@ export function AuthPage({ mode }: { mode: "login" | "signup" }) {
             {mode === "signup" ? (
               <>
                 <Typography sx={{ ...labelSx, mt: 1.2 }}>Username</Typography>
-                <TextField name="username" placeholder="username" fullWidth size="small" sx={fieldSx} />
+                <TextField name="username" fullWidth size="small" sx={fieldSx} />
 
                 <Typography sx={{ ...labelSx, mt: 0.8 }}>Email</Typography>
-                <TextField name="email" type="email" placeholder="email" fullWidth size="small" sx={fieldSx} />
+                <TextField name="email" type="email" fullWidth size="small" sx={fieldSx} />
               </>
             ) : (
               <>
                 <Typography sx={{ ...labelSx, mt: 1.2 }}>Username / Email</Typography>
-                <TextField name="identifier" placeholder="username or email" fullWidth size="small" sx={fieldSx} />
+                <TextField name="identifier" fullWidth size="small" sx={fieldSx} />
               </>
             )}
 
             <Typography sx={{ ...labelSx, mt: 0.8 }}>Password</Typography>
-            <TextField name="password" type="password" placeholder="password" fullWidth size="small" sx={fieldSx} />
+            <TextField name="password" type="password" fullWidth size="small" sx={fieldSx} />
 
             {mode === "signup" ? (
               <>
                 <Typography sx={{ ...labelSx, mt: 0.8 }}>Confirm password</Typography>
-                <TextField name="confirmPassword" type="password" placeholder="confirm password" fullWidth size="small" sx={fieldSx} />
+                <TextField name="confirmPassword" type="password" fullWidth size="small" sx={fieldSx} />
               </>
             ) : (
               <Box sx={{ display: "flex", justifyContent: "flex-end" }}>

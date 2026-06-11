@@ -7,4 +7,3 @@ declare global {
 export function broadcastWebSocketEvent(payload: ApiEventPayload) {
   globalThis.__splitmatesBroadcastWebSocket?.(payload);
 }
-

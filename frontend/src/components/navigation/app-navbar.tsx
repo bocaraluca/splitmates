@@ -68,6 +68,7 @@ export function AppNavbar() {
     setUserMenuAnchor(null);
     setMobileMenuAnchor(null);
     router.push("/");
+    router.refresh();
   }
 
   return (
@@ -116,25 +117,25 @@ export function AppNavbar() {
               ) : null}
           </Box>
 
-          <IconButton
-            aria-label="Open navigation menu"
-            onClick={handleOpenMobileMenu}
-            sx={{
-              display: { xs: "inline-flex", md: "none" },
-              ml: "auto",
-              color: "white",
-              bgcolor: "rgba(255,255,255,0.12)",
-              border: "1px solid rgba(255,255,255,0.24)",
-              width: 44,
-              height: 44,
-              flex: "0 0 auto",
-              "&:hover": {
-                bgcolor: "rgba(255,255,255,0.18)",
-              },
-            }}
-          >
-            <MenuIcon />
-          </IconButton>
+          {role !== "admin" && (
+            <IconButton
+              aria-label="Open navigation menu"
+              onClick={handleOpenMobileMenu}
+              sx={{
+                display: { xs: "inline-flex", md: "none" },
+                ml: "auto",
+                color: "white",
+                bgcolor: "rgba(255,255,255,0.12)",
+                border: "1px solid rgba(255,255,255,0.24)",
+                width: 44,
+                height: 44,
+                flex: "0 0 auto",
+                "&:hover": { bgcolor: "rgba(255,255,255,0.18)" },
+              }}
+            >
+              <MenuIcon />
+            </IconButton>
+          )}
 
           <Stack
             direction="row"
@@ -149,22 +150,47 @@ export function AppNavbar() {
           >
             {role !== "admin" && (
               <>
-                <Button component={Link} href="/dashboard" sx={{ color: "#eef3ff", fontWeight: 800, fontSize: 17 }}>
-                  Dashboard
-                </Button>
-                <Button component={Link} href="/groups" sx={{ color: "#eef3ff", fontWeight: 800, fontSize: 17 }}>
-                  Groups
-                </Button>
-                <Button component={Link} href="/insights/bad-habits" sx={{ color: "#eef3ff", fontWeight: 800, fontSize: 17 }}>
-                  Insights
-                </Button>
+                <Button component={Link} href="/dashboard" sx={{ color: "#eef3ff", fontWeight: 800, fontSize: 17 }}>Dashboard</Button>
+                <Button component={Link} href="/groups" sx={{ color: "#eef3ff", fontWeight: 800, fontSize: 17 }}>Groups</Button>
+                <Button component={Link} href="/insights/bad-habits" sx={{ color: "#eef3ff", fontWeight: 800, fontSize: 17 }}>Insights</Button>
               </>
+            )}
+            {role === "admin" && (
+              <Button component={Link} href="/admin" sx={{ color: "#eef3ff", fontWeight: 900, fontSize: 17 }}>Admin</Button>
             )}
           </Stack>
 
+          {role === "admin" && (
+            <Button
+              component={Link}
+              href="/admin"
+              sx={{
+                display: { xs: "inline-flex", md: "none" },
+                position: "absolute",
+                left: "50%",
+                transform: "translateX(-50%)",
+                zIndex: 1,
+                color: "white",
+                fontWeight: 700,
+                fontSize: 15,
+                bgcolor: "rgba(255,255,255,0.12)",
+                border: "1px solid rgba(255,255,255,0.24)",
+                borderRadius: 999,
+                px: 2.5,
+                py: 0.8,
+                minWidth: 0,
+                whiteSpace: "nowrap",
+                "&:hover": { bgcolor: "rgba(255,255,255,0.18)" },
+              }}
+            >
+              Admin
+            </Button>
+          )}
+
           <Stack direction="row" spacing={1.2} sx={{ ml: "auto", alignItems: "center", zIndex: 2 }}>
             {role === "admin" ? (
-              <Button component={Link} href="/admin" variant="outlined" sx={{ color: "white", borderColor: "rgba(255,255,255,0.5)", fontWeight: 800 }}>
+              <Button component={Link} href="/admin" variant="outlined"
+                sx={{ display: { xs: "none", md: "inline-flex" }, color: "white", borderColor: "rgba(255,255,255,0.5)", fontWeight: 800 }}>
                 Admin
               </Button>
             ) : null}

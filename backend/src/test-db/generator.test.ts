@@ -11,7 +11,7 @@ vi.mock("@/lib/splitmates/core/events", () => ({
 
 beforeEach(async () => {
   await resetDatabase();
-  
+
   vi.useFakeTimers();
   vi.clearAllMocks();
 
@@ -98,20 +98,20 @@ describe("generator edge cases", () => {
   it("returns current status and does nothing if already running", async () => {
     const { group } = await setupGroupWithMembers();
     await startGenerator(group.id);
-    
+
     const status = await startGenerator(group.id);
-    
+
     expect(status.running).toBe(true);
   });
 
   it("picks the first available group if no groupId is provided", async () => {
     const { group } = await setupGroupWithMembers();
-    
+
     await startGenerator();
-    
+
     vi.advanceTimersByTime(1500);
     vi.useRealTimers();
-    
+
     await vi.waitFor(async () => {
       const newCount = await prisma.expense.count({ where: { groupId: group.id } });
       expect(newCount).toBe(1);

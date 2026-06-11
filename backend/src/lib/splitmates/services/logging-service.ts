@@ -151,12 +151,10 @@ export async function getLogs(
                 : undefined,
     };
 
-    // apply numeric userId filter if provided
     if (typeof filters.userId === 'number') {
         where.userId = filters.userId;
     }
 
-    // apply username/email search across related user when `user` filter is provided
     if (typeof filters.user === 'string' && filters.user.trim().length > 0) {
         const q = filters.user.trim();
         const existingAnd = Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : [];

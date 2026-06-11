@@ -287,14 +287,14 @@ describe("formatValidationError", () => {
   it("returns the standard error message for normal errors", () => {
     const standardError = new Error("Something went wrong!");
     const result = formatValidationError(standardError, "Fallback error");
-    
+
     expect(result).toBe("Something went wrong!");
   });
 
   it("returns the fallback message for unknown error types", () => {
     const unknownError = { foo: "bar" }; 
     const result = formatValidationError(unknownError, "Fallback error");
-    
+
     expect(result).toBe("Fallback error");
   });
 });

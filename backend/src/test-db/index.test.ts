@@ -24,11 +24,11 @@ describe("splitmates/index.ts wrappers", () => {
 
     const allUsers = await getUsers();
     expect(allUsers.length).toBeGreaterThanOrEqual(2);
-    
+
     const mappedUser1 = allUsers.find(u => u.username === "alpha");
     expect(mappedUser1).toBeDefined();
     expect(typeof mappedUser1!.createdAt).toBe("string");
-    
+
     const seedUsers = await getSeedUsers();
     expect(seedUsers.length).toEqual(allUsers.length);
 

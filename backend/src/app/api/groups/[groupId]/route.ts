@@ -250,4 +250,3 @@ export async function DELETE(request: Request, context: { params: Promise<{ grou
     return jsonError(message, status);
   }
 }
-

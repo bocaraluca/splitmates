@@ -16,4 +16,3 @@ export function formatValidationError(error: unknown, fallbackMessage: string) {
 
   return fallbackMessage;
 }
-

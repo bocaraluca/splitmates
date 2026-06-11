@@ -28,7 +28,7 @@ describe("GET /api/events", () => {
     });
 
     const response = await GET();
-    
+
     expect(response.headers.get("Content-Type")).toBe("text/event-stream");
     expect(response.headers.get("Cache-Control")).toBe("no-cache, no-transform");
     expect(response.headers.get("Connection")).toBe("keep-alive");
@@ -62,7 +62,7 @@ describe("GET /api/events", () => {
 
     const response = await GET();
     const reader = response.body!.getReader();
-    
+
     await reader.cancel();
     expect(unsubscribeMock).toHaveBeenCalled();
 

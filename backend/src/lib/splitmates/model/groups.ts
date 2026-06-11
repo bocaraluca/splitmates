@@ -11,4 +11,3 @@ export interface GroupRecord {
   memberIds: Id[];
   adminIds: Id[];
 }
-

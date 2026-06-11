@@ -20,4 +20,3 @@ export const EXPENSE_CATEGORIES = [
 export type GroupCategory = (typeof GROUP_CATEGORIES)[number];
 export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number];
 export type SplitType = "equal" | "custom";
-

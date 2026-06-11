@@ -8,4 +8,3 @@ export * from "./dashboard";
 export * from "./generator";
 export * from "./auth";
 export * from "./events";
-

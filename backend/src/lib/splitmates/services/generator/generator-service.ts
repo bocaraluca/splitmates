@@ -90,7 +90,6 @@ export async function startGenerator(groupId?: Id | null) {
 export function stopGenerator() {
   const state = getState();
 
-  // Clear timer regardless of running state — handles edge cases from hot reload
   if (state.generator.timer) {
     clearInterval(state.generator.timer);
     state.generator.timer = null;

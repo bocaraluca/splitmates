@@ -7,7 +7,7 @@ import type { Server as HTTPServer } from 'http';
 
 let io: SocketIOServer | null = null;
 
-const activeUsers = new Map<number, Set<number>>();  // groupId -> set of active userIds in that group
+const activeUsers = new Map<number, Set<number>>();  
 
 export async function initializeSocket(server: HTTPServer) {
   try {
@@ -149,7 +149,6 @@ export async function initializeSocket(server: HTTPServer) {
             timestamp: new Date().toISOString(),
           });
 
-          // Notify group members who are not in the chat room
           void (async () => {
             try {
               const group = await prisma.group.findUnique({ where: { id: groupId }, include: { members: true } });

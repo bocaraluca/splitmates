@@ -14,7 +14,7 @@ export async function GET(
     try {
         const { groupId: groupIdParam } = await params;
         groupId = parseInt(groupIdParam, 10);
-        
+
         if (Number.isNaN(groupId) || groupId <= 0) {
             void logHttpAction({
                 request,
@@ -42,7 +42,7 @@ export async function GET(
         const url = new URL(request.url);
         const page = Number.parseInt(url.searchParams.get('page') ?? '1', 10);
         const pageSize = Number.parseInt(url.searchParams.get('pageSize') ?? '50', 10);
-    
+
         if (Number.isNaN(page) || Number.isNaN(pageSize) || page < 1 || pageSize < 1 || pageSize > 100) {
             void logHttpAction({
                 request,

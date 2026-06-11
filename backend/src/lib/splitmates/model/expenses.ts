@@ -49,4 +49,3 @@ export interface ExpenseListResponse {
   totalItems: number;
   totalPages: number;
 }
-

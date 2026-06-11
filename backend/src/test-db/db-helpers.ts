@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
 export async function resetDatabase() {
-  // Delete in the correct order to respect foreign key constraints
+
   await prisma.session.deleteMany({});
   await prisma.expenseParticipant.deleteMany({});
   await prisma.expense.deleteMany({});

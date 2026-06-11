@@ -106,7 +106,7 @@ function IntroSplash() {
           position: "absolute",
           inset: 0,
           zIndex: 1,
-          background: "linear-gradient(135deg, #ff4fbf 0%, #ff6fa6 38%, #b347ff 100%)",
+          background: "linear-gradient(135deg, #d63ca0 0%, #d45a8a 38%, #9232d6 100%)",
           animation: "introBackgroundHide 1ms linear 1020ms forwards",
         }}
       />
@@ -139,7 +139,7 @@ function IntroSplash() {
           display: "flex",
           alignItems: "center",
           justifyContent: "flex-end",
-          background: "linear-gradient(135deg, #b347ff 0%, #ff6fa6 62%, #ff4fbf 100%)",
+          background: "linear-gradient(135deg, #d63ca0 0%, #d45a8a 38%, #9232d6 100%)",
           borderRight: "1px solid rgba(255,255,255,0.3)",
           zIndex: 2,
           opacity: 0,
@@ -161,7 +161,7 @@ function IntroSplash() {
           display: "flex",
           alignItems: "center",
           justifyContent: "flex-start",
-          background: "linear-gradient(135deg, #ff4fbf 0%, #ff6fa6 38%, #b347ff 100%)",
+          background: "linear-gradient(135deg, #d63ca0 0%, #d45a8a 38%, #9232d6 100%)",
           borderLeft: "1px solid rgba(255,255,255,0.3)",
           zIndex: 2,
           opacity: 0,

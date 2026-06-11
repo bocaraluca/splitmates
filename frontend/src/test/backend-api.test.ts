@@ -422,12 +422,10 @@ describe("offline expense cache helpers", () => {
   it("hides tombstoned expenses from a fresh GET response after offline delete + reconnect", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch");
 
-    
     fetchMock.mockRejectedValueOnce(new TypeError("fetch failed"));
     markExpenseDeleted(7, 1);
     await fetchFromBackend("/groups/7/expenses/1", { method: "DELETE" });
 
-    
     fetchMock.mockResolvedValueOnce(
       jsonResponse({
         items: [
@@ -446,12 +444,10 @@ describe("offline expense cache helpers", () => {
     expect(fresh.items.map((item) => item.id)).toEqual([2]);
     expect(fresh.totalItems).toBe(1);
 
-    
     fetchMock.mockResolvedValueOnce(jsonResponse({ expense: { id: 1 } }, 200));
     const syncResult = await syncPendingBackendRequests();
     expect(syncResult).toEqual({ synced: 1, remaining: 0 });
 
-    
     fetchMock.mockResolvedValueOnce(
       jsonResponse({ items: [{ id: 2, title: "Groceries", amount: 40 }], totalItems: 1, page: 1, pageSize: 20 }),
     );
@@ -473,7 +469,6 @@ describe("offline expense cache helpers", () => {
 
     expect(result).toEqual({ synced: 1, remaining: 0 });
 
-    
     fetchMock.mockResolvedValueOnce(
       jsonResponse({ items: [{ id: 99, title: "Ghost" }], totalItems: 1, page: 1, pageSize: 20 }),
     );
@@ -503,7 +498,6 @@ describe("offline expense cache helpers", () => {
       syncPendingBackendRequests(),
     ]);
 
-    
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(first).toEqual({ synced: 1, remaining: 0 });
     expect(second).toEqual({ synced: 1, remaining: 0 });

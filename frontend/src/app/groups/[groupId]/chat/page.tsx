@@ -68,7 +68,7 @@ export default function Page({ params }: { params: Promise<{ groupId: string }> 
         >
           Back
         </Button>
-        
+
         <Typography 
           variant="h6" 
           component="h1"

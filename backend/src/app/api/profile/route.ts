@@ -11,7 +11,7 @@ export async function GET(request: Request) {
 
   const user = await prisma.user.findUnique({
     where: { id: actor.id },
-    select: { id: true, username: true, email: true, wiseEmail: true, createdAt: true },
+    select: { id: true, username: true, email: true, stripeAccountId: true, createdAt: true },
   });
 
   if (!user) return jsonError("User not found.", 404);
@@ -52,7 +52,7 @@ export async function PATCH(request: Request) {
         ...(input.username ? { username: input.username } : {}),
         ...(input.email ? { email: input.email } : {}),
       },
-      select: { id: true, username: true, email: true, wiseEmail: true, createdAt: true },
+      select: { id: true, username: true, email: true, stripeAccountId: true, createdAt: true },
     });
 
     return jsonOk({ user: { ...user, createdAt: user.createdAt.toISOString() } });

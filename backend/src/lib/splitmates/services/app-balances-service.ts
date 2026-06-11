@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 
 const cache = new Map<string, { data: any, timestamp: number }>();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const CACHE_TTL = 5 * 60 * 1000; 
 
 function getFromCache(key: string) {
     const cache_entry = cache.get(key);

@@ -1,6 +1,5 @@
 "use client";
 
-// navigation via router.push to avoid deprecated Link legacyBehavior
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
@@ -37,7 +36,7 @@ import { AppNavbar } from "@/components/navigation/app-navbar";
 import { fetchFromBackend, markExpenseDeleted } from "@/lib/backend-api";
 import { getRole, getToken } from "@/lib/auth-storage";
 import { EXPENSE_CATEGORIES } from "@/lib/types";
-import type { BackendStatus, BalanceSummary, DashboardSummary, ExpenseCategory, ExpenseListResponse, GroupStats, GroupSummary } from "@/lib/types";
+import type { BalanceSummary, DashboardSummary, ExpenseCategory, ExpenseListResponse, GroupStats, GroupSummary } from "@/lib/types";
 
 function formatMoney(value: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "RON", maximumFractionDigits: 2 }).format(value);
@@ -56,14 +55,13 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
   const [stats, setStats] = useState<GroupStats | null>(null);
   const [tabValue, setTabValue] = useState<"expenses" | "settlements" | "members">(initialTab ?? "expenses");
   const [balances, setBalances] = useState<BalanceSummary | null>(null);
-  const [wisePayingId, setWisePayingId] = useState<number | null>(null);
+  const [myStripeAccountId, setMyStripeAccountId] = useState<string | null>(null);
+  const [myUserId, setMyUserId] = useState<number | null>(null);
+  const [stripePayingId, setStripePayingId] = useState<number | null>(null);
   const [requestingId, setRequestingId] = useState<number | null>(null);
   const [payError, setPayError] = useState<string | null>(null);
   const [paySuccess, setPaySuccess] = useState<string | null>(null);
-  
-  const [generatorBusy, setGeneratorBusy] = useState(false);
-  const [actionMessage, setActionMessage] = useState<string | null>(null);
-  const [generatorRunning, setGeneratorRunning] = useState(false);
+
   const [groupError, setGroupError] = useState<string | null>(null);
   const [token] = useState<string | null>(getToken);
   const [newMemberIdentifier, setNewMemberIdentifier] = useState("");
@@ -107,10 +105,9 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
     try {
       const auth = token ? { token } : {};
 
-      const [expensesResponse, statsResponse, healthResponse, balancesResponse] = await Promise.all([
+      const [expensesResponse, statsResponse, balancesResponse] = await Promise.all([
         fetchExpensePage(1),
         fetchFromBackend<{ stats: GroupStats }>(`/groups/${groupId}/stats`, auth),
-        fetchFromBackend<BackendStatus>("/health", auth),
         fetchFromBackend<{ summary: BalanceSummary }>(`/groups/${groupId}/balances`, auth),
       ]);
 
@@ -122,7 +119,6 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
 
       setStats(statsResponse.stats);
       setBalances(balancesResponse.summary);
-      setGeneratorRunning(Boolean(healthResponse.generator?.running && healthResponse.generator?.groupId === groupId));
       setGroupError(null);
     } catch (error) {
       setGroupError(error instanceof Error ? error.message : "Unable to load group details.");
@@ -132,8 +128,13 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
   const loadGroupPreviewData = useCallback(async () => {
     try {
       const auth = token ? { token } : {};
-      const groupResponse = await fetchFromBackend<{ group: GroupSummary; dashboard: DashboardSummary | null }>(`/groups/${groupId}`, auth);
+      const [groupResponse, profileResponse] = await Promise.all([
+        fetchFromBackend<{ group: GroupSummary; dashboard: DashboardSummary | null }>(`/groups/${groupId}`, auth),
+        fetchFromBackend<{ user: { id: number; stripeAccountId: string | null } }>("/profile", auth),
+      ]);
       setGroup(groupResponse.group);
+      setMyStripeAccountId(profileResponse.user.stripeAccountId);
+      setMyUserId(profileResponse.user.id);
       await loadExpensesStatsAndHealth();
     } catch (error) {
       setGroupError(error instanceof Error ? error.message : "Unable to load group details.");
@@ -206,15 +207,6 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
         return;
       }
 
-      // Generator events — debounce to avoid cascading re-fetches every 1.5s
-      if (type.startsWith("generator.")) {
-        if (debounceTimer) clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
-          void loadExpensesStatsAndHealth();
-        }, 2000);
-        return;
-      }
-
       void loadExpensesStatsAndHealth();
     };
 
@@ -265,46 +257,6 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
     return `conic-gradient(${segments.join(",")})`;
   }, [categoryBreakdown]);
 
-  async function handleGeneratorToggle() {
-    if (generatorRunning) {
-      await handleGeneratorStop();
-      return;
-    }
-    await handleGeneratorStart();
-  }
-
-  async function handleGeneratorStart() {
-    setGeneratorBusy(true);
-    try {
-      await fetchFromBackend("/generator/start", {
-        method: "POST",
-        token: token ?? undefined,
-        body: JSON.stringify({ groupId }),
-      });
-      
-      setGeneratorRunning(true);
-      await loadGroupPreviewData();
-    } catch (error) {
-      setActionMessage(error instanceof Error ? error.message : "Unable to start generator.");
-    } finally {
-      setGeneratorBusy(false);
-    }
-  }
-
-  async function handleGeneratorStop() {
-    setGeneratorBusy(true);
-    try {
-      await fetchFromBackend("/generator/stop", { method: "POST", token: token ?? undefined });
-      
-      setGeneratorRunning(false);
-      await loadGroupPreviewData();
-    } catch (error) {
-      setActionMessage(error instanceof Error ? error.message : "Unable to stop generator.");
-    } finally {
-      setGeneratorBusy(false);
-    }
-  }
-
   async function handleMemberAdd() {
     const identifier = newMemberIdentifier.trim();
     if (!identifier) {
@@ -321,7 +273,7 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
       setNewMemberIdentifier("");
       await loadGroupPreviewData();
     } catch (error) {
-      setActionMessage(error instanceof Error ? error.message : "Unable to add member.");
+      setGroupError(error instanceof Error ? error.message : "Unable to add member.");
     } finally {
       setMemberBusy(false);
     }
@@ -337,7 +289,7 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
       });
       await loadGroupPreviewData();
     } catch (error) {
-      setActionMessage(error instanceof Error ? error.message : "Unable to remove member.");
+      setGroupError(error instanceof Error ? error.message : "Unable to remove member.");
     } finally {
       setMemberBusy(false);
     }
@@ -356,7 +308,7 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
       });
       router.push("/groups");
     } catch (error) {
-      setActionMessage(error instanceof Error ? error.message : "Unable to leave group.");
+      setGroupError(error instanceof Error ? error.message : "Unable to leave group.");
     } finally {
       setGroupActionBusy(false);
     }
@@ -375,55 +327,51 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
       });
       router.push("/groups");
     } catch (error) {
-      setActionMessage(error instanceof Error ? error.message : "Unable to delete group.");
+      setGroupError(error instanceof Error ? error.message : "Unable to delete group.");
     } finally {
       setGroupActionBusy(false);
     }
   }
 
-  async function handleWisePayment(toUserId: number, amount: number) {
-    if (!token) return;
-    const me = group?.members?.find((m) => m != null);
-    if (!me) return;
+  async function handleStripePayment(toUserId: number, amount: number) {
+    if (!token || !myUserId) return;
 
-    setWisePayingId(toUserId);
+    setStripePayingId(toUserId);
     setPayError(null);
     setPaySuccess(null);
     try {
-      await fetchFromBackend(`/groups/${groupId}/payments/wise`, {
+      await fetchFromBackend(`/groups/${groupId}/payments/stripe`, {
         method: "POST",
         token,
-        body: JSON.stringify({ fromUserId: me.id, toUserId, amount }),
+        body: JSON.stringify({ fromUserId: myUserId, toUserId, amount }),
       });
       setPaySuccess("Payment successful!");
       await loadExpensesStatsAndHealth();
     } catch (error) {
       setPayError(error instanceof Error ? error.message : "Payment failed.");
     } finally {
-      setWisePayingId(null);
+      setStripePayingId(null);
     }
   }
 
   async function handleManualPayment(toUserId: number, amount: number) {
-    if (!token) return;
-    const me = group?.members?.find((m) => m != null);
-    if (!me) return;
+    if (!token || !myUserId) return;
 
-    setWisePayingId(toUserId);
+    setStripePayingId(toUserId);
     setPayError(null);
     setPaySuccess(null);
     try {
       await fetchFromBackend(`/groups/${groupId}/payments`, {
         method: "POST",
         token,
-        body: JSON.stringify({ fromUserId: me.id, toUserId, amount }),
+        body: JSON.stringify({ fromUserId: myUserId, toUserId, amount }),
       });
       setPaySuccess("Payment marked as paid!");
       await loadExpensesStatsAndHealth();
     } catch (error) {
       setPayError(error instanceof Error ? error.message : "Payment failed.");
     } finally {
-      setWisePayingId(null);
+      setStripePayingId(null);
     }
   }
 
@@ -487,11 +435,10 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
       <Container maxWidth="xl" sx={{ py: { xs: 3, md: 5 } }}>
         <Stack spacing={3}>
           <Button
-            startIcon={<ArrowBackRoundedIcon />}
             onClick={() => router.push(isAppAdmin ? "/admin" : "/groups")}
-            sx={{ alignSelf: "flex-start", color: "#e79aaa", fontWeight: 700, textTransform: "none" }}
+            sx={{ alignSelf: "flex-start", color: "white", fontWeight: 900, fontSize: 22, minWidth: 0, px: 2.2, py: 0.7, backgroundColor: "rgba(255,255,255,0.16)", border: "1px solid rgba(255,255,255,0.22)", backdropFilter: "blur(10px)", borderRadius: 999, "&:hover": { backgroundColor: "rgba(255,255,255,0.24)" } }}
           >
-            Back
+            ←
           </Button>
 
           <Box
@@ -585,32 +532,6 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
               }}
             >
               {!isAppAdmin && <Button
-                variant="contained"
-                onClick={() => void handleGeneratorToggle()}
-                disabled={generatorBusy}
-                sx={{
-                  borderRadius: 999,
-                  minHeight: { xs: 42, md: 58 },
-                  px: { xs: 1.4, md: 2.8 },
-                  fontSize: { xs: 11, md: 16 },
-                  fontWeight: 900,
-                  textTransform: "none",
-                  boxShadow: "0 14px 28px rgba(111, 41, 198, 0.26)",
-                  bgcolor: generatorRunning ? "#e83ea8" : "#6f29c6",
-                  color: "white",
-                  width: { xs: "100%", sm: "auto" },
-                  minWidth: 0,
-                  whiteSpace: "nowrap",
-                  "&:hover": {
-                    bgcolor: generatorRunning ? "#d9369b" : "#5f22b2",
-                    boxShadow: "0 18px 34px rgba(111, 41, 198, 0.34)",
-                  },
-                }}
-              >
-                {generatorRunning ? "Stop fake expenses" : "Create fake expenses"}
-              </Button>}
-
-              {!isAppAdmin && <Button
                 aria-label="Add expense"
                 onClick={() => router.push(`/groups/${groupId}/expenses/new`)}
                 sx={{
@@ -648,12 +569,6 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
           {groupError ? (
             <Typography sx={{ color: "#cf2e2e", fontWeight: 700 }}>
               {groupError}
-            </Typography>
-          ) : null}
-
-          {actionMessage ? (
-            <Typography sx={{ color: "#5f22b2", fontWeight: 700 }} role="status" aria-live="polite">
-              {actionMessage}
             </Typography>
           ) : null}
 
@@ -971,89 +886,26 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
                     <Typography variant="h5" sx={{ fontWeight: 800 }}>
                       Expenses by Month (Last 6 Months)
                     </Typography>
-                    <Stack
-                      direction={{ xs: "column", sm: "row" }}
-                      spacing={1.1}
-                      sx={{ mt: 2.2, minHeight: { xs: "auto", sm: 200 }, pb: 0.6 }}
-                    >
-                      <Box
-                        sx={{
-                          display: { xs: "grid", sm: "none" },
-                          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-                          gap: 1,
-                          width: "100%",
-                        }}
-                      >
-                        {monthlyBreakdown.map((month) => {
-                          const height = `${Math.max(12, (month.amount / highestMonthlyAmount) * 100)}%`;
-                          return (
-                            <Box
-                              key={month.month}
-                              sx={{
-                                borderRadius: 1.2,
-                                bgcolor: "rgba(255,255,255,0.05)",
-                                p: 1,
-                                minWidth: 0,
-                              }}
-                            >
-                              <Box sx={{ height: 90, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-                                <Box
-                                  sx={{
-                                    width: "70%",
-                                    height,
-                                    bgcolor: "#56c9ef",
-                                    borderRadius: 0.6,
-                                    transition: "height 220ms ease",
-                                  }}
-                                />
-                              </Box>
-                              <Typography sx={{ mt: 0.6, textAlign: "center", fontWeight: 700, fontSize: 12 }}>
-                                {month.month}
-                              </Typography>
-                              <Typography variant="caption" sx={{ display: "block", textAlign: "center", color: "text.secondary", fontSize: 11 }}>
-                                {formatMoney(month.amount)}
-                              </Typography>
-                            </Box>
-                          );
-                        })}
-                      </Box>
-
+                    <Box sx={{ overflowX: "auto", pb: 0.6, mt: 2.2 }}>
                       <Stack
                         direction="row"
                         spacing={1.2}
-                        sx={{ display: { xs: "none", sm: "flex" }, minHeight: 200, overflowX: "auto", pb: 0.6, alignItems: "flex-end", justifyContent: "space-between" }}
+                        sx={{ alignItems: "flex-end", minWidth: monthlyBreakdown.length * 72 }}
                       >
                         {monthlyBreakdown.map((month) => {
-                          const height = `${Math.max(8, (month.amount / highestMonthlyAmount) * 100)}%`;
+                          const barH = Math.max(6, (month.amount / highestMonthlyAmount) * 120);
                           return (
-                            <Box key={month.month} sx={{ flex: 1, minWidth: 0 }}>
-                              <Box
-                                sx={{
-                                  height: 140,
-                                  display: "flex",
-                                  alignItems: "flex-end",
-                                  justifyContent: "center",
-                                }}
-                              >
-                                <Box
-                                  sx={{
-                                    width: "78%",
-                                    height,
-                                    bgcolor: "#56c9ef",
-                                    borderRadius: 0.6,
-                                    transition: "height 220ms ease",
-                                  }}
-                                />
-                              </Box>
-                              <Typography sx={{ mt: 0.8, textAlign: "center", fontWeight: 700 }}>{month.month}</Typography>
-                              <Typography variant="caption" sx={{ display: "block", textAlign: "center", color: "text.secondary" }}>
-                                {formatMoney(month.amount)}
+                            <Box key={month.month} sx={{ flex: "0 0 64px", display: "flex", flexDirection: "column", alignItems: "center", gap: 0.4 }}>
+                              <Typography variant="caption" sx={{ fontSize: 10, color: "#56c9ef", fontWeight: 800, whiteSpace: "nowrap", minHeight: 14 }}>
+                                {month.amount > 0 ? formatMoney(month.amount) : ""}
                               </Typography>
+                              <Box sx={{ width: "70%", height: barH, background: "linear-gradient(180deg, #56c9ef, #6f29c6)", borderRadius: "4px 4px 0 0", transition: "height 220ms ease" }} />
+                              <Typography sx={{ textAlign: "center", fontWeight: 700, fontSize: 12 }}>{month.month}</Typography>
                             </Box>
                           );
                         })}
                       </Stack>
-                    </Stack>
+                    </Box>
                   </CardContent>
                 </Card>
               </Stack>
@@ -1071,7 +923,6 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
                 <Typography sx={{ color: "#cf2e2e", fontWeight: 700 }}>{payError}</Typography>
               )}
 
-              {/* Net balance summary */}
               <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr 1fr" } }}>
                 <Card sx={{ borderRadius: 1.5, bgcolor: "rgba(232,62,168,0.15)", border: "1px solid rgba(232,62,168,0.2)" }}>
                   <CardContent sx={{ textAlign: "center", py: 3 }}>
@@ -1099,7 +950,6 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
                 </Card>
               </Box>
 
-              {/* You owe */}
               {(balances?.youOweTo?.length ?? 0) > 0 && (
                 <Box>
                   <Typography variant="h5" sx={{ fontWeight: 800, mb: 1.5 }}>You owe</Typography>
@@ -1116,25 +966,25 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
                               </Typography>
                             </Box>
                             <Stack direction="row" spacing={1} sx={{ flexShrink: 0 }}>
-                              {b.wiseEmail && (
+                              {b.stripeAccountId && myStripeAccountId && (
                                 <Button
                                   variant="contained"
-                                  disabled={wisePayingId === b.userId}
-                                  onClick={() => void handleWisePayment(Number(b.userId), Math.abs(b.amount))}
+                                  disabled={stripePayingId === b.userId}
+                                  onClick={() => void handleStripePayment(Number(b.userId), Math.abs(b.amount))}
                                   sx={{
                                     borderRadius: 999,
                                     fontWeight: 800,
                                     textTransform: "none",
-                                    bgcolor: "#00b9ff",
-                                    "&:hover": { bgcolor: "#009fd6" },
+                                    bgcolor: "#635bff",
+                                    "&:hover": { bgcolor: "#4f49cc" },
                                   }}
                                 >
-                                  {wisePayingId === b.userId ? "Paying..." : "Pay with Wise"}
+                                  {stripePayingId === b.userId ? "Paying..." : "Pay with Stripe"}
                                 </Button>
                               )}
                               <Button
                                 variant="outlined"
-                                disabled={wisePayingId === b.userId}
+                                disabled={stripePayingId === b.userId}
                                 onClick={() => void handleManualPayment(Number(b.userId), Math.abs(b.amount))}
                                 sx={{ borderRadius: 999, fontWeight: 800, textTransform: "none" }}
                               >
@@ -1149,7 +999,6 @@ export function GroupPreviewPage({ groupId, initialTab }: { groupId: number; ini
                 </Box>
               )}
 
-              {/* Others owe you */}
               {(balances?.othersOweToYou?.length ?? 0) > 0 && (
                 <Box>
                   <Typography variant="h5" sx={{ fontWeight: 800, mb: 1.5 }}>Owed to you</Typography>

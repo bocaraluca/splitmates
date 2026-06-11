@@ -284,21 +284,23 @@ export function EditExpensePage({ groupId, expenseId }: { groupId: number; expen
               alignSelf: "flex-start",
               mb: 1.5,
               color: "white",
-              fontWeight: 700,
-              fontSize: 15,
-              bgcolor: "rgba(255,255,255,0.12)",
+              fontWeight: 900,
+              fontSize: 22,
+              minWidth: 0,
+              px: 2.2,
+              py: 0.7,
+              backgroundColor: "rgba(255,255,255,0.16)",
               border: "1px solid rgba(255,255,255,0.22)",
-              px: 2,
-              py: 0.8,
+              backdropFilter: "blur(10px)",
               borderRadius: 999,
-              "&:hover": { bgcolor: "rgba(255,255,255,0.2)" },
+              "&:hover": { backgroundColor: "rgba(255,255,255,0.24)" },
             }}
           >
-            ← Back
+            ←
           </Button>
           <Card sx={{ borderRadius: "16px", background: "rgba(10,5,30,0.72)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", border: "1px solid rgba(255,255,255,0.15)", boxShadow: "0 24px 60px rgba(0,0,0,0.4)" }}>
             <CardContent sx={{ p: { xs: 4, md: 6 } }}>
-              {/* Hidden file inputs — camera (mobile) and gallery */}
+
               <input
                 ref={cameraInputRef}
                 type="file"
@@ -380,7 +382,6 @@ export function EditExpensePage({ groupId, expenseId }: { groupId: number; expen
               )}
 
               <Box component="form" onSubmit={handleSubmit} sx={{ display: "grid", gap: 2.2 }}>
-
 
                 <TextField
                   name="title"

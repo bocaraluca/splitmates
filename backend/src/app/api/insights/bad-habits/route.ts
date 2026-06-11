@@ -26,7 +26,6 @@ export async function GET(request: Request) {
   const period = url.searchParams.get("period") ?? "month";
   const periodStart = getPeriodStart(period);
 
-  // Get all bad habit expenses where user is a participant
   const participations = await prisma.expenseParticipant.findMany({
     where: { userId: actor.id },
     include: {
@@ -47,7 +46,6 @@ export async function GET(request: Request) {
     (p) => p.expense.isBadHabit && new Date(p.expense.date) >= periodStart,
   );
 
-  // Sum by category using participant's share
   const byCategory = new Map<string, { amount: number; count: number }>();
   let totalSpent = 0;
 
@@ -67,7 +65,6 @@ export async function GET(request: Request) {
     .map(([category, data]) => ({ category, ...data }))
     .sort((a, b) => b.amount - a.amount);
 
-  // Investment projections (7% annual return, monthly contributions)
   const periodMonths = period === "month" ? 1 : period === "6months" ? 6 : 12;
   const monthlyAvg = Math.round((totalSpent / periodMonths) * 100) / 100;
 

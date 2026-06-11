@@ -139,11 +139,11 @@ describe("GraphQL Route", () => {
     deps.addMemberToGroup.mockResolvedValue({ id: 1 });
     deps.removeMemberFromGroup.mockResolvedValue({ id: 1 });
     deps.leaveGroup.mockResolvedValue({ id: 1 });
-    
+
     deps.createExpense.mockResolvedValue({ id: 1, title: "Test Expense", amount: 10, currency: "RON", category: "other", date: "2024-01-01T00:00:00Z", paidByUserId: 1, splitType: "equal", memberIds: [1], shares: [] });
     deps.updateExpense.mockImplementation(async (gid, eid) => (eid === 999 ? null : { id: eid, title: "Test Expense", amount: 10, currency: "RON", category: "other", date: "2024-01-01T00:00:00Z", paidByUserId: 1, splitType: "equal", memberIds: [1], shares: [] }));
     deps.deleteExpense.mockImplementation(async (gid, eid) => (eid === 999 ? null : { id: eid, title: "Test Expense", amount: 10, currency: "RON", category: "other", date: "2024-01-01T00:00:00Z", paidByUserId: 1, splitType: "equal", memberIds: [1], shares: [] }));
-    
+
     deps.createPayment.mockResolvedValue({ id: 1, groupId: 1, fromUserId: 1, toUserId: 2, amount: 10, date: "2024-01-01T00:00:00Z" });
     deps.startGenerator.mockResolvedValue({ running: true, intervalMs: 1500, generatedCount: 1, groupId: 1 });
     deps.stopGenerator.mockReturnValue({ running: false, intervalMs: 1500, generatedCount: 1, groupId: null });
@@ -226,7 +226,7 @@ describe("GraphQL Route", () => {
     deps.getExpenseDetailForGroup.mockResolvedValue({
       expense: { id: 99, groupId: 1, title: "Bare", amount: 10, splitType: "equal", category: "other", date: "2024-01-01", paidByUserId: 1 }
     });
-    
+
     const dummyGroup = { id: 77, name: "G", category: "other", memberIds: [], adminIds: [] };
     deps.removeMemberFromGroup.mockResolvedValue(dummyGroup);
     deps.leaveGroup.mockResolvedValue(dummyGroup);

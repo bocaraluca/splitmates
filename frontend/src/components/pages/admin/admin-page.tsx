@@ -41,7 +41,7 @@ import type {
 } from "@/lib/types";
 
 const ADMIN_ROLES = ["admin", "user"] as const;
-const ADMIN_TABS = ["management", "suspicious", "performance"] as const;
+const ADMIN_TABS = ["management", "suspicious"] as const;
 type AdminTab = (typeof ADMIN_TABS)[number];
 
 function formatDate(value: string) {
@@ -310,7 +310,7 @@ function SuspiciousTab({
 
   return (
     <Stack spacing={3}>
-      <AdminSectionTitle title="Suspicious Users" subtitle="" />
+      <AdminSectionTitle title="Suspicious users" subtitle="" />
 
       <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
         <Button variant="text" startIcon={<RefreshRoundedIcon />} onClick={onRefresh}>
@@ -374,14 +374,17 @@ function SuspiciousTab({
                   </Box>
                 )}
 
-                <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", pt: 1 }}>
-                  <Button size="small" variant="outlined" onClick={() => openViewLogs(entry.userId, entry.user.username)} disabled={loading}>
+                <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ pt: 1.5, alignItems: { xs: "flex-start", sm: "center" } }}>
+                  <Button size="small" variant="outlined" onClick={() => openViewLogs(entry.userId, entry.user.username)} disabled={loading}
+                    sx={{ fontWeight: 700, textTransform: "none" }}>
                     View logs
                   </Button>
-                  <Button size="small" variant="outlined" onClick={() => onClear(entry.userId, entry.user.username)} disabled={loading}>
+                  <Button size="small" variant="outlined" onClick={() => onClear(entry.userId, entry.user.username)} disabled={loading}
+                    sx={{ fontWeight: 700, textTransform: "none" }}>
                     Clear
                   </Button>
-                  <Button size="small" color="error" variant="outlined" startIcon={<DeleteOutlineRoundedIcon />} onClick={() => onDeleteUser(entry.userId, entry.user.username)} disabled={loading}>
+                  <Button size="small" color="error" variant="outlined" startIcon={<DeleteOutlineRoundedIcon />} onClick={() => onDeleteUser(entry.userId, entry.user.username)} disabled={loading}
+                    sx={{ fontWeight: 700, textTransform: "none" }}>
                     Delete user account
                   </Button>
                 </Stack>
@@ -391,42 +394,48 @@ function SuspiciousTab({
         })}
       </Box>
 
-      <Dialog open={viewLogsOpen} onClose={closeViewLogs} fullWidth maxWidth="md">
-        <DialogTitle>Logs for {viewLogsForUsername ?? `#${viewLogsForUserId}`}</DialogTitle>
-        <DialogContent dividers>
+      <Dialog open={viewLogsOpen} onClose={closeViewLogs} fullWidth maxWidth="md"
+        slotProps={{ paper: { sx: { m: { xs: 1, md: 2 }, width: "100%" } } }}>
+        <DialogTitle sx={{ fontSize: { xs: 18, md: 22 }, fontWeight: 800 }}>
+          Logs — {viewLogsForUsername ?? `#${viewLogsForUserId}`}
+        </DialogTitle>
+        <DialogContent dividers sx={{ p: { xs: 1.5, md: 2 } }}>
           {loadingUserLogs ? (
-            <Typography>Loading logs...</Typography>
+            <Typography sx={{ p: 2 }}>Loading logs...</Typography>
           ) : userLogs && userLogs.length ? (
-            <Box sx={{ overflowX: "auto" }}>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Time</TableCell>
-                    <TableCell>Action</TableCell>
-                    <TableCell>Outcome</TableCell>
-                    <TableCell>IP</TableCell>
-                    <TableCell>Device</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {userLogs.map((log) => (
-                    <TableRow key={log.id} hover>
-                      <TableCell sx={{ fontSize: 13 }}>{formatDate(log.createdAt)}</TableCell>
-                      <TableCell sx={{ fontSize: 13 }}>{formatActionTypeLabel(log.actionType)}</TableCell>
-                      <TableCell sx={{ fontSize: 13 }}>{log.outcome ? formatOutcomeLabel(log.outcome) : "-"}</TableCell>
-                      <TableCell sx={{ fontSize: 13 }}>{log.ip ?? "-"}</TableCell>
-                      <TableCell sx={{ fontSize: 13, maxWidth: 200, overflowWrap: "anywhere" }}>{log.clientInfo ?? "-"}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </Box>
+            <Stack spacing={1}>
+              {userLogs.map((log) => (
+                <Box key={log.id} sx={{ p: 1.5, borderRadius: 1.5, bgcolor: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                  <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "flex-start", gap: 1, flexWrap: "wrap" }}>
+                    <Typography sx={{ fontWeight: 700, fontSize: 13 }}>{formatActionTypeLabel(log.actionType)}</Typography>
+                    <Chip
+                      label={log.outcome ? formatOutcomeLabel(log.outcome) : "—"}
+                      size="small"
+                      sx={{
+                        fontSize: 11, fontWeight: 700,
+                        bgcolor: log.outcome === "success" ? "rgba(52,211,153,0.15)" : "rgba(248,113,113,0.15)",
+                        color: log.outcome === "success" ? "#34d399" : "#f87171",
+                      }}
+                    />
+                  </Stack>
+                  <Stack direction="row" spacing={2} sx={{ mt: 0.6, flexWrap: "wrap" }}>
+                    <Typography variant="caption" sx={{ color: "text.secondary" }}>{formatDate(log.createdAt)}</Typography>
+                    {log.ip && <Typography variant="caption" sx={{ color: "text.secondary" }}>IP: {log.ip}</Typography>}
+                  </Stack>
+                  {log.clientInfo && (
+                    <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.3)", display: "block", mt: 0.3, wordBreak: "break-all" }}>
+                      {log.clientInfo}
+                    </Typography>
+                  )}
+                </Box>
+              ))}
+            </Stack>
           ) : (
-            <Typography sx={{ color: "text.secondary" }}>No logs available for this user.</Typography>
+            <Typography sx={{ color: "text.secondary", p: 1 }}>No logs available for this user.</Typography>
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={closeViewLogs}>Close</Button>
+          <Button onClick={closeViewLogs} sx={{ fontWeight: 700 }}>Close</Button>
         </DialogActions>
       </Dialog>
     </Stack>
@@ -573,7 +582,6 @@ function PerformanceTab({ token }: { token: string | null }) {
 
       {error ? <Alert severity="error">{error}</Alert> : null}
 
-
       <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
         <Button
           variant="contained"
@@ -606,7 +614,6 @@ function PerformanceTab({ token }: { token: string | null }) {
           {loadingCached ? "Running…" : "Run again (cache hit)"}
         </Button>
       </Stack>
-
 
       <Stack direction={{ xs: "column", lg: "row" }} spacing={2} sx={{ alignItems: "stretch" }}>
         {naiveResult ? <ResultPanel result={naiveResult} title="Result" /> : null}
@@ -836,8 +843,7 @@ export function AdminPage() {
             <CardContent sx={{ pb: 2 }}>
               <Tabs value={activeTab} onChange={(_, value: AdminTab) => setActiveTab(value)} variant="scrollable" allowScrollButtonsMobile>
                 <Tab value="management" label="Management" />
-                <Tab value="suspicious" label="Suspicious Users" />
-                <Tab value="performance" label="Performance" />
+                <Tab value="suspicious" label="Suspicious users" />
               </Tabs>
             </CardContent>
           </Card>
@@ -881,9 +887,6 @@ export function AdminPage() {
             />
           ) : null}
 
-          {activeTab === "performance" ? (
-            <PerformanceTab token={token} />
-          ) : null}
         </Stack>
       </Container>
     </Box>

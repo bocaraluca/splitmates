@@ -42,5 +42,3 @@ export async function POST(request: Request = new Request("http://localhost/api/
     return jsonError(message, 400);
   }
 }
-
-

@@ -6,4 +6,3 @@ export interface GeneratorStatus {
   generatedCount: number;
   groupId: Id | null;
 }
-

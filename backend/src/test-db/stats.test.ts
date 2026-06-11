@@ -94,7 +94,7 @@ describe("statistics edge cases and balances", () => {
     });
 
     const stats = await getGroupStats(group.id);
-    
+
     expect(stats!.balance.net).toBe(0);
     expect(stats!.balance.othersOweToYou).toHaveLength(0);
     expect(stats!.balance.youOweTo).toHaveLength(0);
@@ -117,7 +117,7 @@ describe("statistics edge cases and balances", () => {
     vi.spyOn(prisma.user, "findMany").mockResolvedValueOnce([]);
 
     const stats = await getGroupStats(group.id);
-    
+
     expect(stats!.balance.youOweTo).toHaveLength(0);
     expect(stats!.balance.othersOweToYou).toHaveLength(0);
   });
@@ -145,7 +145,7 @@ describe("dashboard summaries", () => {
 
     expect(dashboard.user.username).toBe("raluca");
     expect(dashboard.groups).toHaveLength(2);
-    
+
     expect(dashboard.overall.totalOwedToYou).toBe(50);
     expect(dashboard.overall.totalYouOwe).toBe(20);
     expect(dashboard.overall.net).toBe(30);

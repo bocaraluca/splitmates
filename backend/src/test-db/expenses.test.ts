@@ -241,7 +241,7 @@ describe("expenses error handling and details", () => {
 
   it("getExpenseDetailForGroup correctly calculates detailed share percentages", async () => {
     const { alice, bob, group } = await setupGroupWithMembers();
-    
+
     const expense = await createExpense(group.id, alice.id, {
       ...baseExpense,
       paidByUserId: alice.id,
@@ -251,12 +251,12 @@ describe("expenses error handling and details", () => {
     });
 
     const detail = await getExpenseDetailForGroup(group.id, expense.id, bob.id);
-    
+
     expect(detail).not.toBeNull();
     expect(detail!.expense.amount).toBe(100);
     expect(detail!.payer.id).toBe(alice.id);
     expect(detail!.shares).toHaveLength(2);
-    
+
     const bobShare = detail!.shares.find(s => s.userId === bob.id);
     expect(bobShare?.percent).toBe(40);
     expect(detail!.yourShare).toBe(40);
@@ -283,10 +283,10 @@ describe("expenses edge cases", () => {
 
   it("throws if group vanishes during participant check", async () => {
     const { alice, group } = await setupGroupWithMembers();
-    
+
     const originalFindUnique = prisma.group.findUnique;
     let calls = 0;
-    
+
     vi.spyOn(prisma.group, "findUnique").mockImplementation((async (args: any) => {
       calls++;
       if (calls === 2) return null;

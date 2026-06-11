@@ -9,6 +9,7 @@ import RequestQuoteRoundedIcon from "@mui/icons-material/RequestQuoteRounded";
 import ErrorOutlineRoundedIcon from "@mui/icons-material/ErrorOutlineRounded";
 import NotificationsRoundedIcon from "@mui/icons-material/NotificationsRounded";
 import ChatRoundedIcon from "@mui/icons-material/ChatRounded";
+import GppBadRoundedIcon from "@mui/icons-material/GppBadRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import {
   Box, Button, Card, CardContent, Container,
@@ -20,7 +21,7 @@ import { getToken } from "@/lib/auth-storage";
 
 interface Notification {
   id: number;
-  type: "group_added" | "expense_added" | "payment_request" | "payment_received" | "payment_failed" | "chat_message";
+  type: "group_added" | "expense_added" | "payment_request" | "payment_received" | "payment_failed" | "chat_message" | "suspicious_user";
   title: string;
   body: string;
   read: boolean;
@@ -44,6 +45,7 @@ function NotifIcon({ type }: { type: Notification["type"] }) {
   if (type === "payment_received") return <PaymentsRoundedIcon sx={{ ...sx, color: "#27ae60" }} />;
   if (type === "payment_failed") return <ErrorOutlineRoundedIcon sx={{ ...sx, color: "#e74c3c" }} />;
   if (type === "chat_message") return <ChatRoundedIcon sx={{ ...sx, color: "#a78bfa" }} />;
+  if (type === "suspicious_user") return <GppBadRoundedIcon sx={{ ...sx, color: "#ef4444" }} />;
   return <NotificationsRoundedIcon sx={sx} />;
 }
 
@@ -61,7 +63,7 @@ export function NotificationsPage() {
       const res = await fetchFromBackend<{ notifications: Notification[] }>("/notifications", { token });
       setNotifications(res.notifications);
     } catch {
-      // silent fail
+
     } finally {
       setLoading(false);
     }
@@ -84,7 +86,7 @@ export function NotificationsPage() {
       setNotifications(updated);
       dispatchCountChanged(updated);
     } catch {
-      // silent fail
+
     }
   }
 
@@ -96,7 +98,7 @@ export function NotificationsPage() {
     try {
       await fetchFromBackend(`/notifications/${id}`, { method: "DELETE", token });
     } catch {
-      // silent fail
+
     }
   }
 
@@ -107,7 +109,7 @@ export function NotificationsPage() {
     try {
       await fetchFromBackend("/notifications", { method: "DELETE", token });
     } catch {
-      // silent fail
+
     }
   }
 
@@ -115,12 +117,12 @@ export function NotificationsPage() {
     if (!token) return;
     const updated = notifications.map((n) => n.id === id ? { ...n, read: true } : n);
     setNotifications(updated);
-    dispatchCountChanged(updated);
     try {
       await fetchFromBackend(`/notifications/${id}`, { method: "PATCH", token });
     } catch {
-      // silent fail
+
     }
+    dispatchCountChanged(updated);
   }
 
   async function handleNotifClick(notif: Notification) {

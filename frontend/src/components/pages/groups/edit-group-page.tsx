@@ -84,8 +84,8 @@ export function EditGroupPage({ groupId }: { groupId: number }) {
         },
       }}
     >
-      <Button component={Link} href={`/groups/${groupId}`} sx={{ position: "absolute", top: 24, left: 24, color: "white", fontWeight: 700, zIndex: 10, fontSize: 18 }}>
-        ← Back to Group
+      <Button component={Link} href={`/groups/${groupId}`} sx={{ position: "absolute", top: 24, left: 24, zIndex: 10, color: "white", fontWeight: 900, fontSize: 22, minWidth: 0, px: 2.2, py: 0.7, backgroundColor: "rgba(255,255,255,0.16)", border: "1px solid rgba(255,255,255,0.22)", backdropFilter: "blur(10px)", borderRadius: 999, "&:hover": { backgroundColor: "rgba(255,255,255,0.24)" } }}>
+        ←
       </Button>
       <Container maxWidth="md" sx={{ py: { xs: 3, md: 5 }, display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", position: "relative", zIndex: 1 }}>
         <Stack sx={{ width: "100%" }}>

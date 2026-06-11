@@ -63,5 +63,3 @@ export async function GET(request: Request = new Request("http://localhost/api/e
     },
   });
 }
-
-

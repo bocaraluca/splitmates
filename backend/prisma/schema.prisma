@@ -13,7 +13,7 @@ model User {
   passwordHash String?
   googleId String? @unique
   createdAt DateTime @default(now())
-  wiseEmail String? @unique
+  stripeAccountId String? @unique
 
   roleId Int
   role Role @relation(fields: [roleId], references: [id])
@@ -141,7 +141,7 @@ model Payment {
   amount Decimal  @db.Decimal(10, 2)
   createdAt DateTime @default(now())
   status PaymentStatus @default(pending)
-  wiseTransferId String?
+  stripeTransferId String?
   method PaymentMethod @default(manual)
 
   group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
@@ -151,7 +151,7 @@ model Payment {
   @@index([groupId])
   @@index([fromUserId])
   @@index([toUserId])
-  @@index([wiseTransferId])
+  @@index([stripeTransferId])
 }
 
 enum PaymentStatus {
@@ -162,7 +162,7 @@ enum PaymentStatus {
 
 enum PaymentMethod {
   manual
-  wise
+  stripe
 }
 
 model Session {
@@ -518,6 +518,7 @@ enum NotificationType {
   payment_received
   payment_failed
   chat_message
+  suspicious_user
 }
 
 model PaymentRequest {

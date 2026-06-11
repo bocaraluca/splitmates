@@ -3,4 +3,3 @@ export interface ApiEventPayload {
   timestamp: string;
   data: unknown;
 }
-

@@ -211,7 +211,7 @@ export function ChatPanel({
     socket.on("message:deleted", (payload: { messageId?: string }) => {
       const messageId = payload.messageId;
       if (!messageId) return;
-      
+
       const targetId = String(messageId);
 
       messageIdsRef.current.delete(targetId);
@@ -319,7 +319,7 @@ export function ChatPanel({
             display: "flex",
             flexDirection: "column",
          }}>
-          
+
           {!fullPage && (
             <Box>
               <Typography variant="h5" sx={{ fontWeight: 900, lineHeight: 1, letterSpacing: "-0.02em" }}>
@@ -408,7 +408,7 @@ export function ChatPanel({
                         borderBottomLeftRadius: isOwnMessage ? "20px" : "4px",
                         px: 2,
                         py: 1.2,
-                        // Update: Translucent glass bubble for other users
+
                         bgcolor: isOwnMessage ? "#e83ea8" : "rgba(255,255,255,0.09)",
                         backdropFilter: isOwnMessage ? "none" : "blur(8px)",
                         border: isOwnMessage ? "none" : "1px solid rgba(255,255,255,0.12)",
@@ -447,7 +447,6 @@ export function ChatPanel({
             )}
           </Box>
 
-          {/* Input Area */}
           <Stack 
             direction="row" 
             spacing={1.5} 
@@ -466,7 +465,7 @@ export function ChatPanel({
               placeholder="Write a message..."
               fullWidth
               variant="outlined"
-              
+
               sx={{
                 "& .MuiOutlinedInput-root": {
                   borderRadius: "24px",

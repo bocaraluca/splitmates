@@ -6,6 +6,7 @@ import {
 } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { monitorSuspiciousUserBehavior } from "@/lib/splitmates/services/ai-monitor-service";
+import { notifyAdminsSuspiciousUser } from "@/lib/splitmates/services/notification-service";
 
 export const SUSPICIOUS_RULE_KEYS = {
   MULTIPLE_FAILED_LOGINS: "multiple_failed_logins",
@@ -57,6 +58,9 @@ export type SuspiciousEvaluationResult = {
   };
   alertCreated: boolean;
 } | null;
+
+const AI_LAST_CALLED = new Map<number, number>();
+const AI_COOLDOWN_MS = 60 * 60 * 1000;
 
 const LOGIN_FAILED_MIN_COUNT = 5;
 const LOGIN_FAILED_WINDOW_MINUTES = 5;
@@ -264,20 +268,38 @@ export async function evaluateLogForSuspiciousActivity(
   const reasons = triggeredRules.map((t) => t.note);
   const combinedReason = reasons.join(" | ");
 
-  const result = await prisma.$transaction(async (tx) => {
-    const existing = await tx.suspiciousUser.findUnique({ where: { userId: log.userId } });
+  const existing = await prisma.suspiciousUser.findUnique({ where: { userId: log.userId } });
 
-    const suspiciousUser = existing
-      ? await tx.suspiciousUser.update({
-          where: { userId: log.userId },
-          data: { reason: `Analyzing...\n\nRules: ${combinedReason}`, status: SuspiciousStatus.underReview },
-        })
-      : await tx.suspiciousUser.create({
-          data: { userId: log.userId, reason: `Analyzing...\n\nRules: ${combinedReason}`, status: SuspiciousStatus.underReview },
-        });
+  const isNew = !existing;
+  const existingLastSeen = existing?.lastSeen?.getTime() ?? 0;
+  const aiAlreadyDoneRecently =
+    !isNew &&
+    existing?.reason &&
+    !existing.reason.startsWith("Analyzing") &&
+    Date.now() - existingLastSeen < AI_COOLDOWN_MS;
 
-    for (const triggered of triggeredRules) {
-      await tx.observation.create({
+  const suspiciousUser = existing
+    ? await prisma.suspiciousUser.update({
+        where: { userId: log.userId },
+        data: {
+          status: SuspiciousStatus.underReview,
+          ...(aiAlreadyDoneRecently ? {} : { reason: `Analyzing...\n\nRules: ${combinedReason}` }),
+        },
+      })
+    : await prisma.suspiciousUser.create({
+        data: { userId: log.userId, reason: `Analyzing...\n\nRules: ${combinedReason}`, status: SuspiciousStatus.underReview },
+      });
+
+  if (isNew) {
+    const userRecord = await prisma.user.findUnique({ where: { id: log.userId }, select: { username: true } });
+    setImmediate(() => {
+      void notifyAdminsSuspiciousUser(log.userId, userRecord?.username ?? `user_${log.userId}`);
+    });
+  }
+
+  for (const triggered of triggeredRules) {
+    try {
+      await prisma.observation.create({
         data: {
           suspiciousUserId: suspiciousUser.userId,
           logId: log.id,
@@ -287,27 +309,37 @@ export async function evaluateLogForSuspiciousActivity(
           actionJson: triggered.actionJson,
         },
       });
+    } catch {
     }
+  }
 
-    return {
-      suspiciousUserId: log.userId,
-      triggeredRules: triggeredRules.map((t) => ({
-        ruleId: t.rule.id,
-        key: t.rule.key,
-        note: t.note,
-      })),
-      suspiciousUser: {
-        userId: suspiciousUser.userId,
-        status: suspiciousUser.status,
-        reason: suspiciousUser.reason,
-      },
-      alertCreated: false,
-    };
-  });
+  const result = {
+    suspiciousUserId: log.userId,
+    triggeredRules: triggeredRules.map((t) => ({
+      ruleId: t.rule.id,
+      key: t.rule.key,
+      note: t.note,
+    })),
+    suspiciousUser: {
+      userId: suspiciousUser.userId,
+      status: suspiciousUser.status,
+      reason: suspiciousUser.reason,
+    },
+    alertCreated: false,
+  };
 
-  // Ollama runs in background — does not block the request
+  if (aiAlreadyDoneRecently) {
+    return result;
+  }
+
   setImmediate(async () => {
     try {
+      const lastCall = AI_LAST_CALLED.get(log.userId) ?? 0;
+      if (Date.now() - lastCall < AI_COOLDOWN_MS) {
+        return;
+      }
+      AI_LAST_CALLED.set(log.userId, Date.now());
+
       const [userRecord, recentLogs] = await Promise.all([
         prisma.user.findUnique({ where: { id: log.userId }, select: { username: true } }),
         prisma.log.findMany({
