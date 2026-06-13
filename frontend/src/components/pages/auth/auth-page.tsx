@@ -52,19 +52,34 @@ export function AuthPage({ mode }: { mode: "login" | "signup" }) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
 
-    try {
-      const payload = mode === "login" ? parseAuthLoginForm(formData) : parseAuthRegisterForm(formData);
-      const response = await fetchFromBackend<LoginResponse>(mode === "login" ? "/auth/login" : "/auth/signup", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
+    const endpoint = mode === "login" ? "/auth/login" : "/auth/signup";
+    const payload = mode === "login" ? parseAuthLoginForm(formData) : parseAuthRegisterForm(formData);
+    const init = { method: "POST", body: JSON.stringify(payload) };
 
+    async function attempt() {
+      const response = await fetchFromBackend<LoginResponse>(endpoint, init);
       login(response.user.username, response.token, response.role, response.permissions);
       router.push(response.role === "admin" ? "/admin" : "/dashboard");
+    }
+
+    try {
+      await attempt();
     } catch (error) {
       const status = (error as { status?: number }).status;
       if (status === 503 || status === 502 || status === 504) {
-        setErrorMessage("Server temporarily unavailable. Please try again in a few seconds.");
+        setErrorMessage("Server is starting up, retrying…");
+        await new Promise((resolve) => setTimeout(resolve, 4000));
+        try {
+          await attempt();
+        } catch (retryError) {
+          const retryStatus = (retryError as { status?: number }).status;
+          if (retryStatus === 503 || retryStatus === 502 || retryStatus === 504) {
+            setErrorMessage("Server temporarily unavailable. Please try again in a few seconds.");
+          } else {
+            const message = retryError instanceof Error ? retryError.message : "";
+            setErrorMessage(message || "Invalid login credentials.");
+          }
+        }
       } else {
         const message = error instanceof Error ? error.message : "";
         setErrorMessage(message || "Invalid login credentials.");
