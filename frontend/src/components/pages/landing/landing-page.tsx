@@ -285,12 +285,22 @@ export function LandingPage() {
                     },
                   }}
                 >
+                  <Box
+                    sx={{
+                      position: "absolute",
+                      inset: 0,
+                      background: "radial-gradient(ellipse 70% 45% at 50% 62%, rgba(255,255,255,0.45) 0%, rgba(180,130,255,0.25) 50%, transparent 80%)",
+                      filter: "blur(18px)",
+                      zIndex: 0,
+                      pointerEvents: "none",
+                    }}
+                  />
                   <Image
                     src="/assets/laptop.png"
                     alt="SplitMates laptop preview"
                     fill
                     sizes="(max-width: 1200px) 100vw, 940px"
-                    style={{ objectFit: "contain" }}
+                    style={{ objectFit: "contain", zIndex: 1 }}
                     priority
                   />
 
