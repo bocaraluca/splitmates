@@ -143,7 +143,7 @@ function BalanceList({ title, entries, amountColor, emptyText, keyPrefix, groupB
             ? <Typography sx={{ color: "text.secondary" }}>{emptyText}</Typography>
             : entries.map((balance) => {
               const uid = Number(balance.userId);
-              const groupId = findGroupId(uid);
+              const groupId = balance.groupId ? Number(balance.groupId) : findGroupId(uid);
               return (
                 <Box key={`${keyPrefix}-${uid}`} sx={{ py: 1, borderBottom: "1px solid rgba(255,255,255,0.07)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 1.5, flexWrap: "wrap" }}>
                   <Box sx={{ flex: 1, minWidth: 0 }}>

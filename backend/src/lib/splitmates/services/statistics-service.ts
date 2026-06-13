@@ -340,9 +340,39 @@ export async function getDashboardSummary(userId: Id): Promise<DashboardSummary>
     if (idx >= 0) monthlyStats[idx].amount = roundMoney(monthlyStats[idx].amount + parseAmount(e.amount));
   }
 
+  const allOtherUserIds = [
+    ...overall.youOweTo.map(b => Number(b.userId)),
+    ...overall.othersOweToYou.map(b => Number(b.userId)),
+  ];
+
+  const sharedGroupForUser = new Map<number, number>();
+
+  if (allOtherUserIds.length > 0) {
+    const myGroupIds = groups.map(g => g.id);
+    const otherMemberships = await prisma.groupMember.findMany({
+      where: { userId: { in: allOtherUserIds }, groupId: { in: myGroupIds } },
+      select: { userId: true, groupId: true },
+    });
+    for (const m of otherMemberships) {
+      const uid = Number(m.userId);
+      if (!sharedGroupForUser.has(uid)) {
+        sharedGroupForUser.set(uid, Number(m.groupId));
+      }
+    }
+  }
+
+  const annotate = (b: typeof overall.youOweTo[0]) => ({
+    ...b,
+    groupId: sharedGroupForUser.get(Number(b.userId)),
+  });
+
   return {
     user: { id: user.id, username: user.username, email: user.email, createdAt: user.createdAt.toISOString() },
-    overall,
+    overall: {
+      ...overall,
+      youOweTo: overall.youOweTo.map(annotate),
+      othersOweToYou: overall.othersOweToYou.map(annotate),
+    },
     groups: groupSummaries,
     categoryStats,
     monthlyStats,

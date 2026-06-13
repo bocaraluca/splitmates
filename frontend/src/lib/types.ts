@@ -22,6 +22,7 @@ export interface UserBalance {
   email: string;
   stripeAccountId: string | null;
   amount: number;
+  groupId?: Id;
 }
 
 export interface BalanceSummary {
