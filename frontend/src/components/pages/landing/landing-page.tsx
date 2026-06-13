@@ -26,8 +26,8 @@ const featureCards = [
     icon: <AccountBalanceWalletRoundedIcon fontSize="small" />,
   },
   {
-    title: "See who owes what",
-    text: "without awkward reminders",
+    title: "Turn bad spending",
+    text: "into  financial awareness",
     color: "linear-gradient(135deg, #ff7dbf, #f04f9e)",
     icon: <BarChartRoundedIcon fontSize="small" />,
   },
@@ -218,16 +218,17 @@ export function LandingPage() {
                 }}
               >
                 <Stack spacing={3.2} sx={{ maxWidth: 620 }}>
-                  <Typography sx={{ fontSize: { xs: 18, md: 22 }, letterSpacing: "0.09em", color: "#dd7f9c", fontWeight: 900, textTransform: "uppercase" }}>
+                  <Typography sx={{ fontSize: { xs: 18, md: 22 }, letterSpacing: "0.09em", color: "white", fontWeight: 900, textTransform: "uppercase" }}>
                     ✨ Shared expenses, made simple
                   </Typography>
 
-                  <Typography sx={{ fontFamily: "Georgia, Times New Roman, serif", fontSize: { xs: 44, md: 58 }, lineHeight: 0.98, color: "white", fontWeight: 700 }}>
-                    Split bills, not friendships
+                  <Typography sx={{ fontFamily: "Georgia, Times New Roman, serif", fontSize: { xs: 44, md: 58 }, lineHeight: 0.98, fontWeight: 700 }}>
+                    <Box component="span" sx={{ color: "#f38ea4" }}>Split bills, not </Box>
+                    <Box component="span" sx={{ color: "#73c3e8" }}>friendships</Box>
                   </Typography>
 
                   <Typography sx={{ fontSize: { xs: 20, md: 24 }, color: "rgba(255,255,255,0.72)", lineHeight: 1.55, maxWidth: 610 }}>
-                    SplitMates helps students and friends track shared expenses, spot bad spending habits, and get a clearer idea of what next month might look like. Use it for rent, groceries, weekends out, study breaks, or any shared cost you want to keep track of.
+                    SplitMates lets you split expenses with friends, roommates or anyone — track who owes what, pay each other back directly through the app, and keep the conversation in one place with built-in group chats. It also helps you understand where your money actually goes, and what you could do differently next month.
                   </Typography>
 
                   <Stack spacing={2.2}>

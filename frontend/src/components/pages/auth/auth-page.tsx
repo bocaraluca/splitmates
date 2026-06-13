@@ -66,7 +66,8 @@ export function AuthPage({ mode }: { mode: "login" | "signup" }) {
       if (status === 503 || status === 502 || status === 504) {
         setErrorMessage("Server temporarily unavailable. Please try again in a few seconds.");
       } else {
-        setErrorMessage("Invalid login credentials.");
+        const message = error instanceof Error ? error.message : "";
+        setErrorMessage(message || "Invalid login credentials.");
       }
     }
   }
