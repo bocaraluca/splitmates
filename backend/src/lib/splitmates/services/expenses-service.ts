@@ -329,6 +329,7 @@ export async function createPayment(groupId: Id, actorUserId: Id, input: Omit<Pa
       toUserId: input.toUserId,
       amount: roundMoney(input.amount),
       createdAt: input.date ? new Date(input.date) : new Date(),
+      status: "completed",
     }
   });
 
